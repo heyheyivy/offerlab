@@ -2074,7 +2074,7 @@ export default function App() {
   useEffect(() => {
     const el = document.createElement("style");
     el.textContent = `
-      @import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Courier+Prime&display=swap');
+      @import url('https://fonts.loli.net/css2?family=Inter:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Courier+Prime&display=swap');
       *{box-sizing:border-box;margin:0;padding:0;}
       body{background:${T.bg};color:${T.text};font-family:${T.body};-webkit-font-smoothing:antialiased;text-align:left;}
       #root{text-align:left;}
