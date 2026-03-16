@@ -5,33 +5,34 @@ export default async function handler(req, res) {
   if (!company || !role) return res.status(400).json({ error: "missing params" });
 
   try {
-    // Search for interview experiences
     const queries = [
       `${company} ${role} 面经`,
-      `${company} ${role} 面试题`,
-      `site:nowcoder.com ${company} ${role}`,
+      `${company} ${role} 面试题 site:nowcoder.com OR site:zhihu.com`,
     ];
 
-    const results = [];
+    // Run searches in parallel
+    const searchResults = await Promise.allSettled(
+      queries.map(q =>
+        fetch("https://google.serper.dev/search", {
+          method: "POST",
+          headers: {
+            "X-API-KEY": process.env.SERPER_API_KEY,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ q, gl: "cn", hl: "zh-cn", num: 6 }),
+        }).then(r => r.json())
+      )
+    );
 
-    for (const q of queries) {
-      const r = await fetch("https://google.serper.dev/search", {
-        method: "POST",
-        headers: {
-          "X-API-KEY": process.env.SERPER_API_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ q, gl: "cn", hl: "zh-cn", num: 5 }),
-      });
-      const data = await r.json();
-      if (data.organic) {
-        for (const item of data.organic) {
-          // Deduplicate by link
+    const results = [];
+    for (const r of searchResults) {
+      if (r.status === "fulfilled" && r.value.organic) {
+        for (const item of r.value.organic) {
           if (!results.find(x => x.link === item.link)) {
             results.push({
               title: item.title,
               link: item.link,
-              snippet: item.snippet,
+              snippet: item.snippet || "",
               source: item.displayLink || item.link,
             });
           }
@@ -39,10 +40,12 @@ export default async function handler(req, res) {
       }
     }
 
-    // Take top 10 results
-    const top = results.slice(0, 10);
+    const top = results.slice(0, 8);
 
-    // Use DeepSeek to summarize common questions
+    if (top.length === 0) {
+      return res.status(200).json({ results: [], summary: null });
+    }
+
     const snippets = top.map((r, i) => `[${i+1}] ${r.title}\n${r.snippet}`).join("\n\n");
 
     const summaryRes = await fetch("https://api.deepseek.com/v1/chat/completions", {
@@ -53,13 +56,11 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: "deepseek-chat",
-        max_tokens: 800,
-        messages: [
-          {
-            role: "user",
-            content: `根据以下关于「${company} ${role}」的面经搜索结果，总结出5-8个最常见的面试问题或考察点，用简洁的列表呈现。\n\n${snippets}\n\n返回JSON（不含markdown）：{"questions":["问题1","问题2"...],"tips":"一句话备考建议"}`,
-          }
-        ],
+        max_tokens: 600,
+        messages: [{
+          role: "user",
+          content: `根据以下「${company} ${role}」的面经搜索结果，总结5-7个最常被考察的问题或知识点。\n\n${snippets}\n\n返回JSON（不含markdown）：{"questions":["考察点1","考察点2"],"tips":"一句话备考建议"}`,
+        }],
       }),
     });
 
@@ -68,12 +69,12 @@ export default async function handler(req, res) {
 
     let summary = null;
     try {
-      const clean = summaryText.replace(/```json|```/g, "").trim();
-      summary = JSON.parse(clean);
+      summary = JSON.parse(summaryText.replace(/```json|```/g, "").trim());
     } catch(e) {}
 
     res.status(200).json({ results: top, summary });
   } catch (e) {
+    console.error("Research error:", e);
     res.status(500).json({ error: e.message });
   }
 }
