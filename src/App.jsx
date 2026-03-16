@@ -1021,8 +1021,7 @@ ${compressed.slice(0, 2000)}
               </button>
             ))}
           </div>
-
-          {/* Record mode — inline streaming, same pattern as mock interview */}
+          <p style={{ color: T.subtle, fontSize: 12, marginTop: 8 }}>建议用录音软件录完后转文字粘贴，效果更准确</p>
           {inputMode === "record" && (
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
