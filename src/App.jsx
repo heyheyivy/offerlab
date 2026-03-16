@@ -2111,6 +2111,7 @@ export default function App() {
       setSessions(all => all.map(s => s.id === next.id ? next : s));
       return next;
     });
+    setTimeout(() => window.scrollTo(0, 0), 50);
   }, []);
 
   const startNextRound = useCallback((nextRoundLabel) => {
@@ -2230,7 +2231,6 @@ export default function App() {
     const phase = current.phase;
     const phaseVisible = [0, 1, 3, 4];
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    useEffect(() => { window.scrollTo(0, 0); }, [phase]);
     return (
       <div style={{ minHeight: "100vh", background: T.bg }}>
         <div style={{ background: T.bg, borderBottom: "1px solid " + T.border, padding: "18px 48px", display: "flex", alignItems: "center", gap: 20, position: "sticky", top: 0, zIndex: 100 }}>
