@@ -2174,6 +2174,7 @@ export default function App() {
       setCurrent(s); setSessions(all => [s, ...all]); saveSession(s);
     }
     setView("session");
+    setTimeout(() => window.scrollTo(0, 0), 50);
   }, []);
 
   if (view === "home") {
