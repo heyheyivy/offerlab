@@ -443,11 +443,13 @@ function PhaseMock({ session, update, onNext }) {
     }[round] || "综合考察候选人能力";
 
     const jdText = session.jdSummary || (session.jd||"").slice(0,400);
-    const isEnglishJD = (jdText.match(/[a-zA-Z]+/g)||[]).join("").length > jdText.length * 0.4;
-    const langRule = isEnglishJD
-      ? "语言规则：JD是英文，每道题先用中文写题目，然后换行附上英文原版，格式：\n中文题目\n(English: English version of the question)"
-      : "语言规则：用中文出题。";
-    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${session.resumeSummary || (session.resume||"").slice(0,400)}\n\n请生成5道有针对性的面试题，覆盖不同考察维度。${langRule}\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"3-5句参考答案要点","tips":"回答思路提示"}]}\n共5题，难度适中，针对${round || "本轮"}面试。`;
+    const resumeText = session.resumeSummary || (session.resume||"").slice(0,400);
+    const hasEnglish = (t) => (t.match(/[a-zA-Z]{3,}/g)||[]).length > 5;
+    const needBilingual = hasEnglish(jdText) || hasEnglish(resumeText);
+    const langRule = needBilingual
+      ? "语言规则：检测到英文简历或JD，每道题先用中文出题，附英文翻译，格式：中文题目 (English: English translation)"
+      : "语言规则：全部用中文出题。";
+    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${resumeText}\n\n请生成5道有针对性的面试题，覆盖不同考察维度。${langRule}\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"3-5句参考答案要点","tips":"回答思路提示"}]}\n共5题，难度适中，针对${round || "本轮"}面试。`;
 
     try {
       const system = "你是专业面试官，只输出合法JSON，不含任何markdown，不含代码块，直接输出{开头的JSON，用中文。";
@@ -1288,6 +1290,8 @@ function AppToolkit({ app, baseResume }) {
   const [genStatus, setGenStatus] = useState("idle"); // idle | running | timeout | done
   const [genStep, setGenStep] = useState("");
   const [copiedId, setCopiedId] = useState(null);
+  const [enGreeting, setEnGreeting] = useState(data.enGreeting || "");
+  const [enGreetLoading, setEnGreetLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState("");
 
@@ -1469,11 +1473,11 @@ function AppToolkit({ app, baseResume }) {
       let gs;
       {
         const raw = await callClaude(
-          "你是顶尖求职文案专家，专门写让HR眼前一亮、忍不住回复的招呼语。\n\n写作要求：\n- 180-220字，分3段，第一人称\n- 第一段（2-3句）：用最强的一个经历开场，必须包含具体公司名/项目名/数字，让HR立刻知道你是谁\n- 第二段（2-3句）：精准对应JD，直接引用JD中的2-3个关键词，说明你的经历如何匹配这个岗位的核心需求\n- 第三段（1-2句）：表达主动性和对这家公司的了解，体现你做过research，结尾自然有力\n- 禁止：「您好」「贵公司」「非常感兴趣」「期待与您」「希望能」等套话\n- 每句话都要有实质信息，不允许废话\n- 语言规则：如果简历主体是英文，用英文写；否则用中文写\n\n" +
+          "你是顶尖求职文案专家，专门写让HR眼前一亮、忍不住回复的招呼语。\n\n写作要求：\n- 180-220字，分3段，第一人称，用中文写\n- 第一段（2-3句）：用最强的一个经历开场，必须包含具体公司名/项目名/数字，让HR立刻知道你是谁\n- 第二段（2-3句）：精准对应JD，直接引用JD中的2-3个关键词，说明你的经历如何匹配这个岗位的核心需求\n- 第三段（1-2句）：表达主动性和对这家公司的了解，体现你做过research，结尾自然有力\n- 禁止：「您好」「贵公司」「非常感兴趣」「期待与您」「希望能」等套话\n- 每句话都要有实质信息，不允许废话\n\n" +
           "公司：" + app.company + "\n职位：" + app.role +
           "\nJD原文（必须引用其中2-3个关键词）：" + (jd||"").slice(0,600) +
-          "\n求职者简历（提取最强经历，同时判断简历主要语言）：" + effectiveResume.slice(0,800) +
-          '\n\n返回JSON：{"greetings":[{"id":"g1","text":"招呼语正文（180-220字）","highlight":"3个引用的JD关键词"}]}',
+          "\n求职者简历（提取最强经历）：" + effectiveResume.slice(0,800) +
+          '\n\n返回JSON：{"greetings":[{"id":"g1","text":"招呼语正文（180-220字，中文）","highlight":"3个引用的JD关键词"}]}',
           1000
         );
         const result = extractJSON(raw);
@@ -1485,6 +1489,25 @@ function AppToolkit({ app, baseResume }) {
       }
     } catch(e) {}
     clearInterval(timer); setGreetProgress(100); setGreetLoading(false);
+  };
+
+  const generateEnGreeting = async () => {
+    setEnGreetLoading(true);
+    try {
+      const raw = await callClaude(
+        "You are an expert job application copywriter. Write a compelling English greeting message for a job application platform (like LinkedIn or email).\n\nRequirements:\n- 150-200 words, 3 paragraphs, first person\n- Paragraph 1: Open with your strongest experience (specific company name/project/number)\n- Paragraph 2: Reference 2-3 keywords directly from the JD, explain how your experience matches\n- Paragraph 3: Show you've researched the company, end with confidence\n- No clichés like 'I am very interested' or 'I hope to'\n- Every sentence must contain substantive information\n\n" +
+        "Company: " + app.company + "\nRole: " + app.role +
+        "\nJD (quote 2-3 keywords): " + (jd||"").slice(0,600) +
+        "\nResume (extract strongest experience): " + effectiveResume.slice(0,800) +
+        '\n\nReturn JSON: {"text":"English greeting (150-200 words)"}',
+        800
+      );
+      const result = extractJSON(raw);
+      if (result && result.text) {
+        setEnGreeting(result.text);
+        persist({ enGreeting: result.text });
+      }
+    } finally { setEnGreetLoading(false); }
   };
 
   const analyzeResume = async () => {
@@ -1657,11 +1680,22 @@ ${changeList}
                         <Btn size="sm" onClick={() => copyGreet(g.id, g.custom || g.text)}>{copiedId === g.id ? "✓ 已复制" : "复制"}</Btn>
                         <button onClick={() => { setEditDraft(g.custom || g.text); setEditingId(g.id); }} style={{ background: "none", border: "none", color: T.muted, fontSize: 13, cursor: "pointer", fontFamily: T.body }}>编辑</button>
                         {g.custom && <button onClick={() => saveEdit(g.id, "")} style={{ background: "none", border: "none", color: T.subtle, fontSize: 13, cursor: "pointer", fontFamily: T.body }}>还原</button>}
+                        <button onClick={generateEnGreeting} disabled={enGreetLoading} style={{ background: "none", border: "none", color: T.accent, fontSize: 13, cursor: "pointer", fontFamily: T.body, opacity: enGreetLoading ? 0.5 : 1 }}>{enGreetLoading ? "生成中..." : "🌐 英文版"}</button>
                       </div>
                     </>
                   )}
                 </div>
               ))}
+            </div>
+          )}
+          {tab === "greet" && enGreeting && (
+            <div style={{ marginTop: 24, paddingTop: 24, borderTop: "1px solid " + T.border }}>
+              <p style={{ color: T.subtle, fontSize: 12, letterSpacing: "0.06em", marginBottom: 12 }}>英文版招呼语</p>
+              <p style={{ color: T.text, fontSize: 15, lineHeight: 1.9, whiteSpace: "pre-wrap", marginBottom: 14 }}>{enGreeting}</p>
+              <div style={{ display: "flex", gap: 14 }}>
+                <Btn size="sm" onClick={() => { navigator.clipboard.writeText(enGreeting); }}>复制英文版</Btn>
+                <button onClick={generateEnGreeting} disabled={enGreetLoading} style={{ background: "none", border: "none", color: T.muted, fontSize: 13, cursor: "pointer", fontFamily: T.body }}>{enGreetLoading ? "生成中..." : "重新生成"}</button>
+              </div>
             </div>
           )}
           {tab === "resume" && (
