@@ -2412,7 +2412,15 @@ export default function App() {
     return (
       <div style={{ minHeight: "100vh", background: T.bg }}>
         <div style={{ padding: "22px 48px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, background: T.bg, borderBottom: "1px solid " + T.border }}>
-          <span style={{ color: T.text, fontWeight: 500, fontSize: 15, fontFamily: T.body, letterSpacing: "-0.02em" }}>OfferLab</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <svg width="18" height="18" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+              <rect width="32" height="32" rx="7" fill="#6B7D6D"/>
+              <text x="16" y="17" fontFamily="Georgia, serif" fontSize="15" fontWeight="400" fill="white" textAnchor="middle" dominantBaseline="middle">O</text>
+              <rect x="7" y="21.5" width="18" height="0.7" fill="white" opacity="0.35"/>
+              <text x="16" y="27" fontFamily="Arial, sans-serif" fontSize="4" fontWeight="500" fill="white" textAnchor="middle" letterSpacing="2.5" opacity="0.9">LAB</text>
+            </svg>
+            <span style={{ color: T.text, fontWeight: 500, fontSize: 15, fontFamily: T.body, letterSpacing: "-0.02em" }}>OfferLab</span>
+          </div>
           <Btn size="sm" onClick={() => handleStartPrep(null, {})}>新建面试准备</Btn>
         </div>
 
