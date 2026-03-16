@@ -2009,8 +2009,8 @@ function AppTracker({ sessions, onStartPrep }) {
     }
   };
   const deleteApp = (id) => { persist(apps.filter(a => a.id !== id)); if (expandedId === id) setExpandedId(null); };
-  const filtered = filterStatus === "全部" ? apps : apps.filter(a => a.status === filterStatus);
-  const stats = APP_STATUSES.reduce((acc, s) => ({ ...acc, [s]: apps.filter(a => a.status === s).length }), {});
+  const filtered = filterStatus === "全部" ? apps : apps.filter(a => (a.status || "已投递") === filterStatus);
+  const stats = APP_STATUSES.reduce((acc, s) => ({ ...acc, [s]: apps.filter(a => (a.status || "已投递") === s).length }), {});
 
   return (
     <div>
@@ -2198,7 +2198,7 @@ function AppTracker({ sessions, onStartPrep }) {
                   {a.note && <span style={{ color: T.subtle, fontSize: 13 }}>{a.note}</span>}
                 </div>
               </div>
-              <select value={a.status} onChange={e => updateStatus(a.id, e.target.value)}
+              <select value={a.status || "已投递"} onChange={e => updateStatus(a.id, e.target.value)}
                 style={{ background: T.surface, border: "1px solid " + col + "66", borderRadius: 6, padding: "4px 8px", color: col, fontSize: 12, fontFamily: T.body, outline: "none", cursor: "pointer", flexShrink: 0 }}>
                 {APP_STATUSES.map(s => <option key={s} style={{ background: T.surface, color: T.text }}>{s}</option>)}
               </select>
