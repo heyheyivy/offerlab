@@ -8,39 +8,59 @@ export default async function handler(req, res) {
 
   try {
     const queries = [
-      `${company} ${role} 面经`,
-      `${company} ${role} 面试题 site:nowcoder.com OR site:zhihu.com`,
-      `${company} ${role} 面试 面经 site:xiaohongshu.com`,
+      // General: Google, Chinese interview sites
+      {
+        payload: { q: `${company} ${role} 面经`, gl: "cn", hl: "zh-cn", num: 6 },
+        engine: "google",
+      },
+      // Nowcoder + Zhihu targeted
+      {
+        payload: { q: `${company} ${role} 面试题 site:nowcoder.com OR site:zhihu.com`, gl: "cn", hl: "zh-cn", num: 6 },
+        engine: "google",
+      },
+      // Xiaohongshu via Baidu (better XHS indexing than Google)
+      {
+        payload: { q: `${company} ${role} 面经 site:xiaohongshu.com`, gl: "cn", hl: "zh-cn", num: 6 },
+        engine: "baidu",
+      },
+      // Xiaohongshu keyword trick on Google — returns aggregator pages + some direct links
+      {
+        payload: { q: `小红书 ${company} ${role} 面经`, gl: "cn", hl: "zh-cn", num: 6 },
+        engine: "google",
+      },
     ];
 
-    // Run all three searches in parallel
     const searchResults = await Promise.allSettled(
-      queries.map(q =>
-        fetch("https://google.serper.dev/search", {
+      queries.map(({ payload, engine }) =>
+        fetch(`https://google.serper.dev/${engine === "baidu" ? "search" : "search"}`, {
           method: "POST",
           headers: {
             "X-API-KEY": process.env.SERPER_API_KEY,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ q, gl: "cn", hl: "zh-cn", num: 6 }),
+          // Serper supports engine param for Baidu
+          body: JSON.stringify({ ...payload, ...(engine === "baidu" ? { engine: "baidu" } : {}) }),
         }).then(r => r.json())
       )
     );
 
-    // Separate xiaohongshu results (index 2) from the rest so we can prioritize them
+    // Collect xhs items first for priority ordering
     const xhsItems = [];
     const otherItems = [];
 
     searchResults.forEach((r, idx) => {
-      if (r.status !== "fulfilled" || !r.value.organic) return;
-      for (const item of r.value.organic) {
+      if (r.status !== "fulfilled") return;
+      const organic = r.value.organic || [];
+      for (const item of organic) {
+        const link = item.link || "";
         const entry = {
-          title: item.title,
-          link: item.link,
+          title: item.title || "",
+          link,
           snippet: item.snippet || "",
-          source: item.displayLink || item.link,
+          source: item.displayLink || link,
         };
-        if (idx === 2) {
+        const isXhs = link.includes("xiaohongshu.com") || link.includes("xhslink.com");
+        if (isXhs) {
           xhsItems.push(entry);
         } else {
           otherItems.push(entry);
@@ -48,11 +68,11 @@ export default async function handler(req, res) {
       }
     });
 
-    // Merge: xiaohongshu first, then others, dedupe by link
+    // Merge: xhs first, dedupe by link
     const seen = new Set();
     const results = [];
     for (const item of [...xhsItems, ...otherItems]) {
-      if (!seen.has(item.link)) {
+      if (item.link && !seen.has(item.link)) {
         seen.add(item.link);
         results.push(item);
       }
