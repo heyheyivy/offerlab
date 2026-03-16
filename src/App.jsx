@@ -526,7 +526,7 @@ function PhaseMock({ session, update, onNext }) {
     const researchHints = session.research?.summary?.questions?.length
       ? "\n网上面经中常见考察点（参考这些出题，不要照抄）：\n" + session.research.summary.questions.slice(0,5).map((q,i) => `${i+1}. ${q}`).join("\n")
       : "";
-    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${resumeText}${researchHints}\n\n请生成5道有针对性的面试题，覆盖不同考察维度。${langRule}\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"3-5句参考答案要点","tips":"回答思路提示"}]}\n共5题，难度适中，针对${round || "本轮"}面试。`;
+    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${resumeText}${researchHints}\n\n请生成5道有针对性的面试题，覆盖不同考察维度。${langRule}\n\nreference字段要求（重要）：\n- 给出完整的参考回答，不少于5句\n- 必须包含1-2个具体案例或数据佐证，格式如"例如：[具体情景/数字/结果]"\n- 行为题用STAR结构（情境→任务→行动→结果），结果要量化\n- 技术题给出核心要点后附实际应用场景举例\n- 语言自然，像真人在面试中说话，而不是列要点\n\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"完整参考回答，含案例","tips":"回答思路提示"}]}\n共5题，难度适中，针对${round || "本轮"}面试。`;
 
     try {
       const system = "你是专业面试官，只输出合法JSON，不含任何markdown，不含代码块，直接输出{开头的JSON，用中文。";
