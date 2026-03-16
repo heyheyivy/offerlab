@@ -227,10 +227,11 @@ function StepDot({ n, active, done }) {
 //  Phase 1: Job Info 
 function PhaseJobInfo({ session, update, onNext }) {
   const [summarizing, setSummarizing] = useState(false);
+  const [researching, setResearching] = useState(false);
+  const [research, setResearch] = useState(session.research || null);
 
   const handleNext = async () => {
-    onNext(); // 立即跳转，不等待
-    // 后台静默执行摘要，面试题生成时会用到
+    onNext();
     try {
       const [jdSum, resSum] = await Promise.all([
         session.jd ? summarizeJD(session.jd) : Promise.resolve(""),
@@ -239,6 +240,23 @@ function PhaseJobInfo({ session, update, onNext }) {
       update({ jdSummary: jdSum, resumeSummary: resSum });
     } catch(e) {}
   };
+
+  const handleResearch = async () => {
+    if (!session.company || !session.role) return;
+    setResearching(true);
+    try {
+      const r = await fetch("/api/research", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ company: session.company, role: session.role }),
+      });
+      const data = await r.json();
+      setResearch(data);
+      update({ research: data });
+    } catch(e) { console.error(e); }
+    finally { setResearching(false); }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 44 }}>
       <div>
@@ -266,6 +284,51 @@ function PhaseJobInfo({ session, update, onNext }) {
           <div><Label>公司</Label><Inp value={session.company} onChange={v => update({ company: v })} placeholder="ByteDance / OpenAI / Shopee"/></div>
           <div><Label>职位</Label><Inp value={session.role} onChange={v => update({ role: v })} placeholder="AI Product / Growth Lead"/></div>
         </div>
+        {session.company && session.role && (
+          <div style={{ marginTop: 16 }}>
+            <button onClick={handleResearch} disabled={researching}
+              style={{ background: "none", border: "none", color: researching ? T.subtle : T.accent, fontSize: 13, cursor: researching ? "default" : "pointer", fontFamily: T.body, padding: 0 }}>
+              {researching ? "搜索中..." : "🔍 搜索面经"}
+            </button>
+          </div>
+        )}
+        {research && (
+          <div style={{ marginTop: 20, padding: "20px", background: T.surface, borderRadius: 10, border: "1px solid " + T.border }}>
+            {research.summary && (
+              <div style={{ marginBottom: 20 }}>
+                <p style={{ color: T.subtle, fontSize: 11, letterSpacing: "0.08em", marginBottom: 12 }}>常见考察点</p>
+                {(research.summary.questions || []).map((q, i) => (
+                  <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8 }}>
+                    <span style={{ color: T.accent, fontSize: 12, minWidth: 18, flexShrink: 0 }}>{String(i+1).padStart(2,"0")}</span>
+                    <p style={{ color: T.text, fontSize: 13, lineHeight: 1.7 }}>{q}</p>
+                  </div>
+                ))}
+                {research.summary.tips && (
+                  <p style={{ color: T.muted, fontSize: 12, marginTop: 12, paddingTop: 12, borderTop: "1px solid " + T.border }}>{research.summary.tips}</p>
+                )}
+              </div>
+            )}
+            {research.results && research.results.length > 0 && (
+              <div>
+                <p style={{ color: T.subtle, fontSize: 11, letterSpacing: "0.08em", marginBottom: 12 }}>相关面经链接</p>
+                {research.results.slice(0, 6).map((r, i) => (
+                  <div key={i} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: i < 5 ? "1px solid " + T.border : "none" }}>
+                    <a href={r.link} target="_blank" rel="noopener noreferrer"
+                      style={{ color: T.accent, fontSize: 13, textDecoration: "none", display: "block", marginBottom: 2 }}>
+                      {r.title}
+                    </a>
+                    <p style={{ color: T.subtle, fontSize: 11 }}>{r.source}</p>
+                    {r.snippet && <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginTop: 3 }}>{r.snippet.slice(0, 100)}...</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+            <button onClick={handleResearch} disabled={researching}
+              style={{ background: "none", border: "none", color: T.subtle, fontSize: 12, cursor: "pointer", fontFamily: T.body, marginTop: 8, padding: 0 }}>
+              {researching ? "搜索中..." : "重新搜索"}
+            </button>
+          </div>
+        )}
       </div>
       <div>
         <p style={{ color: T.subtle, fontSize: 13, marginBottom: 20 }}>面试安排（可选）</p>
