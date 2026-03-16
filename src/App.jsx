@@ -1938,9 +1938,9 @@ function AppTracker({ sessions, onStartPrep }) {
         </div>
       )}
       {apps.length > 0 && (
-        <div style={{ display: "flex", gap: 0, marginBottom: 40, borderBottom: "1px solid " + T.border }}>
+        <div style={{ display: "flex", gap: 0, marginBottom: 40, borderBottom: "1px solid " + T.border, overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           {[["全部", apps.length], ["已投递", stats["已投递"]], ["已读/沟通中", stats["已读/沟通中"]], ["约面试", stats["约面试"]], ["拿到 Offer", stats["拿到 Offer"]], ["已拒绝", stats["已拒绝"]]].map(([label, count]) => (
-            <button key={label} onClick={() => setFilterStatus(label)} style={{ background: "none", border: "none", borderBottom: filterStatus === label ? "1.5px solid " + T.text : "1.5px solid transparent", marginBottom: -1, cursor: "pointer", padding: "0 0 12px 0", marginRight: 20, fontSize: 13, fontFamily: T.body, color: filterStatus === label ? T.text : T.subtle, fontWeight: filterStatus === label ? 500 : 400, transition: "color .15s", whiteSpace: "nowrap" }}>
+            <button key={label} onClick={() => setFilterStatus(label)} style={{ background: "none", border: "none", borderBottom: filterStatus === label ? "1.5px solid " + T.text : "1.5px solid transparent", marginBottom: -1, cursor: "pointer", padding: "0 0 12px 0", marginRight: 20, fontSize: 13, fontFamily: T.body, color: filterStatus === label ? T.text : T.subtle, fontWeight: filterStatus === label ? 500 : 400, transition: "color .15s", whiteSpace: "nowrap", flexShrink: 0 }}>
               {label}{count > 0 ? <span style={{ color: T.subtle, marginLeft: 4, fontWeight: 400 }}>{count}</span> : ""}
             </button>
           ))}
@@ -2043,7 +2043,7 @@ function AppTracker({ sessions, onStartPrep }) {
                 </div>
               </div>
               <select value={a.status} onChange={e => updateStatus(a.id, e.target.value)}
-                style={{ background: "transparent", border: "none", borderBottom: "1px solid " + col + "44", padding: "2px 4px 2px 0", color: col, fontSize: 13, fontFamily: T.body, outline: "none", cursor: "pointer", flexShrink: 0 }}>
+                style={{ background: T.surface, border: "1px solid " + col + "66", borderRadius: 6, padding: "4px 8px", color: col, fontSize: 12, fontFamily: T.body, outline: "none", cursor: "pointer", flexShrink: 0 }}>
                 {APP_STATUSES.map(s => <option key={s} style={{ background: T.surface, color: T.text }}>{s}</option>)}
               </select>
               {isConfirmDelete ? (
