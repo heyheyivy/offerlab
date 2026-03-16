@@ -1055,7 +1055,7 @@ ${compressed.slice(0, 2000)}
           {inputMode === "paste" && (
             <div>
               <p style={{ color: T.subtle, fontSize: 12, fontWeight: 500, letterSpacing: "0.06em", marginBottom: 10 }}>粘贴面试录音转录文字</p>
-              <TA value={transcript} onChange={setTranscript} rows={10} placeholder="粘贴面试录音转录文字..."/>
+              <TA value={transcript} onChange={setTranscript} rows={10} placeholder="将转录好的文字粘贴到这里，包含面试官提问和你的回答..."/>
               {transcript.length > 0 && <p style={{ color: T.subtle, fontSize: 12, marginTop: 6 }}>{transcript.length} 字</p>}
             </div>
           )}
