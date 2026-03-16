@@ -482,7 +482,7 @@ function PhaseMock({ session, update, onNext }) {
     let result;
     {
       result = await haikuJSON(
-        "你是严格专业的面试教练，只输出合法JSON，不含markdown。评估要具体，直接指出问题，给出可操作的改进。语言规则：如果面试题是英文则用英文回复，否则用中文回复。",
+        "你是严格专业的面试教练，只输出合法JSON，不含markdown。评估要具体，直接指出问题，给出可操作的改进。语言规则：全部用中文回复，如果需要引用英文原文可以保留英文词汇，但主体必须是中文。",
         `请对以下面试回答进行深度评估：
 
 问题：${q.question}
@@ -1492,6 +1492,7 @@ function AppToolkit({ app, baseResume }) {
   };
 
   const generateEnGreeting = async () => {
+    if (!jd.trim() && !effectiveResume.trim()) return;
     setEnGreetLoading(true);
     try {
       const raw = await callClaude(
@@ -1680,7 +1681,7 @@ ${changeList}
                         <Btn size="sm" onClick={() => copyGreet(g.id, g.custom || g.text)}>{copiedId === g.id ? "✓ 已复制" : "复制"}</Btn>
                         <button onClick={() => { setEditDraft(g.custom || g.text); setEditingId(g.id); }} style={{ background: "none", border: "none", color: T.muted, fontSize: 13, cursor: "pointer", fontFamily: T.body }}>编辑</button>
                         {g.custom && <button onClick={() => saveEdit(g.id, "")} style={{ background: "none", border: "none", color: T.subtle, fontSize: 13, cursor: "pointer", fontFamily: T.body }}>还原</button>}
-                        <button onClick={generateEnGreeting} disabled={enGreetLoading} style={{ background: "none", border: "none", color: T.accent, fontSize: 13, cursor: "pointer", fontFamily: T.body, opacity: enGreetLoading ? 0.5 : 1 }}>{enGreetLoading ? "生成中..." : "🌐 英文版"}</button>
+                        <button onClick={generateEnGreeting} disabled={enGreetLoading} style={{ background: "none", border: "none", color: T.accent, fontSize: 13, cursor: "pointer", fontFamily: T.body, opacity: enGreetLoading ? 0.5 : 1 }}>{enGreetLoading ? "生成中..." : "英文版"}</button>
                       </div>
                     </>
                   )}
@@ -1871,7 +1872,7 @@ async function backgroundGenerate(appId, company, role, jd, resumeText, resumeSo
     if (combined) {
       const next = {
         ...existing,
-        greetings: (combined.greetings||[]).map(g => ({ ...g, custom: "" })),
+        greetings: (existing.greetings && existing.greetings.length) ? existing.greetings : (combined.greetings||[]).map(g => ({ ...g, custom: "" })),
         suggestions: (combined.suggestions||[]).map(s => ({ ...s, custom: "" })),
         matchScore: combined.matchScore || null,
         matchSummary: combined.matchSummary || "",
