@@ -285,16 +285,11 @@ function PhaseJobInfo({ session, update, onNext }) {
           <div><Label>职位</Label><Inp value={session.role} onChange={v => update({ role: v })} placeholder="AI Product / Growth Lead"/></div>
         </div>
         {session.company && session.role && (
-          <div style={{ marginTop: 20, display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ marginTop: 16 }}>
             <button onClick={handleResearch} disabled={researching}
-              style={{ background: researching ? T.dim : T.green, border: "none", color: "#fff", fontSize: 13, fontWeight: 500, cursor: researching ? "default" : "pointer", fontFamily: T.body, padding: "8px 18px", borderRadius: 6, letterSpacing: "0.01em", transition: "background .15s", opacity: researching ? 0.7 : 1 }}>
-              {researching ? "搜索中..." : "🔍 搜索面经"}
+              style={{ background: "none", border: "none", color: researching ? T.subtle : T.accent, fontSize: 13, cursor: researching ? "default" : "pointer", fontFamily: T.body, padding: 0, letterSpacing: "0.01em" }}>
+              {researching ? "搜索中..." : "搜索面经"}
             </button>
-            <a href={"https://www.xiaohongshu.com/search_result?keyword=" + encodeURIComponent(session.company + " " + session.role + " 面经")}
-              target="_blank" rel="noopener noreferrer"
-              style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#FF2442", border: "none", color: "#fff", fontSize: 13, fontWeight: 500, padding: "8px 18px", borderRadius: 6, textDecoration: "none", letterSpacing: "0.01em", whiteSpace: "nowrap" }}>
-              <span style={{ fontSize: 14 }}>📕</span> 小红书
-            </a>
           </div>
         )}
         {research && (
