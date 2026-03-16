@@ -287,7 +287,7 @@ function PhaseJobInfo({ session, update, onNext }) {
         {session.company && session.role && (
           <div style={{ marginTop: 16 }}>
             <button onClick={handleResearch} disabled={researching}
-              style={{ background: "none", border: "none", color: researching ? T.subtle : T.accent, fontSize: 13, cursor: researching ? "default" : "pointer", fontFamily: T.body, padding: 0, letterSpacing: "0.01em" }}>
+              style={{ background: researching ? T.dim : T.accent, border: "none", color: "#fff", fontSize: 13, fontWeight: 400, cursor: researching ? "default" : "pointer", fontFamily: T.body, padding: "5px 12px", borderRadius: 6, letterSpacing: "0.01em", transition: "background .15s", opacity: researching ? 0.6 : 1 }}>
               {researching ? "搜索中..." : "搜索面经"}
             </button>
           </div>
