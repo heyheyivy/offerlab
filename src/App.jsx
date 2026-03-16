@@ -442,7 +442,12 @@ function PhaseMock({ session, update, onNext }) {
       "HR面": "薪资期望、入职时间、职业规划和文化契合",
     }[round] || "综合考察候选人能力";
 
-    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${session.jdSummary || (session.jd||"").slice(0,400)}\n简历摘要：${session.resumeSummary || (session.resume||"").slice(0,400)}\n\n请生成5道有针对性的面试题，覆盖不同考察维度。返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"3-5句参考答案要点","tips":"回答思路提示"}]}\n共5题，难度适中，针对${round || "本轮"}面试。`;
+    const jdText = session.jdSummary || (session.jd||"").slice(0,400);
+    const isEnglishJD = (jdText.match(/[a-zA-Z]+/g)||[]).join("").length > jdText.length * 0.4;
+    const langRule = isEnglishJD
+      ? "语言规则：JD是英文，每道题先用中文写题目，然后换行附上英文原版，格式：\n中文题目\n(English: English version of the question)"
+      : "语言规则：用中文出题。";
+    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${session.resumeSummary || (session.resume||"").slice(0,400)}\n\n请生成5道有针对性的面试题，覆盖不同考察维度。${langRule}\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"3-5句参考答案要点","tips":"回答思路提示"}]}\n共5题，难度适中，针对${round || "本轮"}面试。`;
 
     try {
       const system = "你是专业面试官，只输出合法JSON，不含任何markdown，不含代码块，直接输出{开头的JSON，用中文。";
@@ -475,7 +480,7 @@ function PhaseMock({ session, update, onNext }) {
     let result;
     {
       result = await haikuJSON(
-        "你是严格专业的面试教练，只输出合法JSON，不含markdown，用中文。评估要具体，直接指出问题，给出可操作的改进。",
+        "你是严格专业的面试教练，只输出合法JSON，不含markdown。评估要具体，直接指出问题，给出可操作的改进。语言规则：如果面试题是英文则用英文回复，否则用中文回复。",
         `请对以下面试回答进行深度评估：
 
 问题：${q.question}
@@ -1464,10 +1469,10 @@ function AppToolkit({ app, baseResume }) {
       let gs;
       {
         const raw = await callClaude(
-          "你是顶尖BOSS直聘求职文案专家，专门写让HR眼前一亮、忍不住回复的招呼语。\n\n写作要求：\n- 180-220字，分3段，第一人称\n- 第一段（2-3句）：用最强的一个经历开场，必须包含具体公司名/项目名/数字，让HR立刻知道你是谁\n- 第二段（2-3句）：精准对应JD，直接引用JD中的2-3个关键词，说明你的经历如何匹配这个岗位的核心需求\n- 第三段（1-2句）：表达主动性和对这家公司的了解，体现你做过research，结尾自然有力\n- 禁止：「您好」「贵公司」「非常感兴趣」「期待与您」「希望能」等套话\n- 每句话都要有实质信息，不允许废话\n\n" +
+          "你是顶尖求职文案专家，专门写让HR眼前一亮、忍不住回复的招呼语。\n\n写作要求：\n- 180-220字，分3段，第一人称\n- 第一段（2-3句）：用最强的一个经历开场，必须包含具体公司名/项目名/数字，让HR立刻知道你是谁\n- 第二段（2-3句）：精准对应JD，直接引用JD中的2-3个关键词，说明你的经历如何匹配这个岗位的核心需求\n- 第三段（1-2句）：表达主动性和对这家公司的了解，体现你做过research，结尾自然有力\n- 禁止：「您好」「贵公司」「非常感兴趣」「期待与您」「希望能」等套话\n- 每句话都要有实质信息，不允许废话\n- 语言规则：如果简历主体是英文，用英文写；否则用中文写\n\n" +
           "公司：" + app.company + "\n职位：" + app.role +
           "\nJD原文（必须引用其中2-3个关键词）：" + (jd||"").slice(0,600) +
-          "\n求职者简历（提取最强经历）：" + effectiveResume.slice(0,800) +
+          "\n求职者简历（提取最强经历，同时判断简历主要语言）：" + effectiveResume.slice(0,800) +
           '\n\n返回JSON：{"greetings":[{"id":"g1","text":"招呼语正文（180-220字）","highlight":"3个引用的JD关键词"}]}',
           1000
         );
@@ -1490,7 +1495,7 @@ function AppToolkit({ app, baseResume }) {
       let result;
       {
         const raw = await callClaude(
-          "你是顶级简历优化顾问，专注于帮助候选人针对特定岗位优化简历。请深度分析以下简历与JD的匹配情况。\n\n分析原则：\n1. 给出5-7条有价值的修改建议，覆盖不同模块\n2. 每条建议必须直接引用简历原文，\"original\"字段必须是简历中实际存在的文字（逐字引用）\n3. \"suggested\"必须是完整的改写后文字，可以直接复制替换原文\n4. \"reason\"必须说明：这条改动对应JD哪个具体要求，为什么能提升匹配度\n5. 优先处理：量化数据补充（加数字/比例/规模）、与JD高频关键词对齐、删除低相关内容、强化核心亮点\n6. 禁止：格式/排版/字体建议；不要建议添加不存在的经历\n\n公司：" + app.company + "\n职位：" + app.role + "\nJD全文：" + (jd||"").slice(0,800) + "\nJD要点摘要：" + (jdSummary||"") + "\n\n简历全文：\n" + effectiveResume.slice(0,2500) + '\n\n返回JSON（不含markdown），5-7条建议：{"matchScore":0到100,"matchSummary":"一句话指出最核心的匹配差距和最大优势","suggestions":[{"id":"s1","module":"工作经历/技能/项目/自我介绍","type":"强化/补充/删减/重写","original":"简历原文（完整引用）","suggested":"完整的优化后文字（可直接替换）","reason":"对应JD哪个要求，具体说明价值"}]}',
+          "你是顶级简历优化顾问，专注于帮助候选人针对特定岗位优化简历。请深度分析以下简历与JD的匹配情况。\n\n分析原则：\n1. 给出5-7条有价值的修改建议，覆盖不同模块\n2. 每条建议必须直接引用简历原文，\"original\"字段必须是简历中实际存在的文字（逐字引用）\n3. \"suggested\"必须是完整的改写后文字，可以直接复制替换原文\n4. \"reason\"必须说明：这条改动对应JD哪个具体要求，为什么能提升匹配度\n5. 优先处理：量化数据补充（加数字/比例/规模）、与JD高频关键词对齐、删除低相关内容、强化核心亮点\n6. 禁止：格式/排版/字体建议；不要建议添加不存在的经历\n7. 语言规则：用与简历相同的语言输出所有建议（简历是英文则全部用英文，简历是中文则全部用中文）\n\n公司：" + app.company + "\n职位：" + app.role + "\nJD全文：" + (jd||"").slice(0,800) + "\nJD要点摘要：" + (jdSummary||"") + "\n\n简历全文：\n" + effectiveResume.slice(0,2500) + '\n\n返回JSON（不含markdown），5-7条建议：{"matchScore":0到100,"matchSummary":"一句话指出最核心的匹配差距和最大优势","suggestions":[{"id":"s1","module":"工作经历/技能/项目/自我介绍","type":"强化/补充/删减/重写","original":"简历原文（完整引用）","suggested":"完整的优化后文字（可直接替换）","reason":"对应JD哪个要求，具体说明价值"}]}',
           3000
         );
         result = extractJSON(raw);
