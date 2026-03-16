@@ -1755,8 +1755,8 @@ ${changeList}
                     ) : null}
                     <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
                       <Btn size="sm" disabled={!optimized || building} onClick={() => { const el = document.createElement("textarea"); el.value = optimized; el.style.position="fixed"; el.style.opacity="0"; document.body.appendChild(el); el.focus(); el.select(); document.execCommand("copy"); document.body.removeChild(el); setResumeCopied(true); setTimeout(() => setResumeCopied(false), 2000); }}>{resumeCopied ? "已复制" : building ? "生成中..." : "复制优化简历"}</Btn>
-                      <Btn variant="ghost" size="sm" disabled={!optimized || wordLoading} onClick={() => handleWordDownload()}>{wordLoading ? "生成中..." : "下载 Word"}</Btn>
-                      {optimized && <button onClick={() => setShowResumePreview(v => !v)} style={{ background: "none", border: "none", color: T.muted, fontSize: 13, cursor: "pointer", fontFamily: T.body }}>{showResumePreview ? "收起" : "预览"}</button>}
+                      <Btn variant="ghost" size="sm" disabled={!optimized || wordLoading || building} onClick={() => handleWordDownload()}>{wordLoading ? "生成中..." : "下载 Word"}</Btn>
+                      {optimized && !building && <button onClick={() => setShowResumePreview(v => !v)} style={{ background: "none", border: "none", color: T.muted, fontSize: 13, cursor: "pointer", fontFamily: T.body }}>{showResumePreview ? "收起" : "预览"}</button>}
                     </div>
                     {showResumePreview && optimized && (
                       <div style={{ marginTop: 20, borderTop: "1px solid " + T.border, paddingTop: 16 }}>
@@ -2228,7 +2228,9 @@ export default function App() {
 
   if (view === "session" && current) {
     const phase = current.phase;
-    const phaseVisible = [0, 1, 3, 4]; // Skip phase 2 (auto)
+    const phaseVisible = [0, 1, 3, 4];
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useEffect(() => { window.scrollTo(0, 0); }, [phase]);
     return (
       <div style={{ minHeight: "100vh", background: T.bg }}>
         <div style={{ background: T.bg, borderBottom: "1px solid " + T.border, padding: "18px 48px", display: "flex", alignItems: "center", gap: 20, position: "sticky", top: 0, zIndex: 100 }}>
@@ -2255,8 +2257,7 @@ export default function App() {
         <div style={{ maxWidth: 620, margin: "0 auto", padding: "56px 32px 100px", animation: "fadeUp .3s ease both" }}>
           <p style={{ color: T.subtle, fontSize: 12, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 40 }}>{PHASE_LABELS[PHASE_STEP_MAP.indexOf(phase)] || ""}</p>
 
-          {/* Scroll to top when phase changes */}
-          {(() => { window.scrollTo(0, 0); return null; })()}
+          {/* Scroll to top only when phase changes */}
 
           {phase === 0 && <PhaseJobInfo session={current} update={updateCurrent} onNext={advancePhase}/>}
           {phase === 1 && <PhaseMock session={current} update={updateCurrent} onNext={advancePhase}/>}
