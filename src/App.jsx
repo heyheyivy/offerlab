@@ -1269,7 +1269,7 @@ function downloadAsWord(text, filename) {
 }
 
 //  App Toolkit:  + 
-function AppToolkit({ app, baseResume }) {
+function AppToolkit({ app, baseResume, resumes = [] }) {
   const [tab, setTab] = useState("greet");
   const [data, setData] = useState(() => {
     try { const s = localStorage.getItem("toolkit:" + app.id); return s ? JSON.parse(s) : {}; } catch(e) { return {}; }
@@ -1281,7 +1281,8 @@ function AppToolkit({ app, baseResume }) {
   const [jdSummary, setJdSummary] = useState(data.jdSummary || "");
   const [resumeSummary, setResumeSummary] = useState(data.resumeSummary || "");
   const [summarizing, setSummarizing] = useState(false);
-  const effectiveResume = resumeSource === "base" ? baseResume : resume;
+  const effectiveResume = resumeSource === "custom" ? resume :
+    (resumes.find(r => r.id === resumeSource)?.text || (resumeSource === "base" ? baseResume : resume) || "");
 
   // Greet state
   const [greetings, setGreetings] = useState(data.greetings || []);
@@ -1496,17 +1497,25 @@ function AppToolkit({ app, baseResume }) {
     setEnGreetLoading(true);
     try {
       const raw = await callClaude(
-        "You are an expert job application copywriter. Write a compelling English greeting message for a job application platform (like LinkedIn or email).\n\nRequirements:\n- 150-200 words, 3 paragraphs, first person\n- Paragraph 1: Open with your strongest experience (specific company name/project/number)\n- Paragraph 2: Reference 2-3 keywords directly from the JD, explain how your experience matches\n- Paragraph 3: Show you've researched the company, end with confidence\n- No clichés like 'I am very interested' or 'I hope to'\n- Every sentence must contain substantive information\n\n" +
+        "Write a compelling English greeting message (150-200 words, 3 paragraphs, first person) for a job application.\n\nParagraph 1: Open with your strongest experience - must include specific company name/project/number.\nParagraph 2: Quote 2-3 keywords directly from the JD, explain how your experience matches.\nParagraph 3: Show you researched the company, end confidently.\nNO clichés. Every sentence must have substance.\nOUTPUT ONLY ENGLISH. Do not use any Chinese characters.\n\n" +
         "Company: " + app.company + "\nRole: " + app.role +
-        "\nJD (quote 2-3 keywords): " + (jd||"").slice(0,600) +
-        "\nResume (extract strongest experience): " + effectiveResume.slice(0,800) +
-        '\n\nReturn JSON: {"text":"English greeting (150-200 words)"}',
-        800
+        "\nJD keywords to reference: " + (jd||"").slice(0,600) +
+        "\nResume (extract strongest points): " + effectiveResume.slice(0,800) +
+        '\n\nReturn JSON only: {"text":"your English greeting here"}',
+        900,
+        { system: "You are an English copywriting expert. Always respond in English only. Output valid JSON with no markdown." }
       );
       const result = extractJSON(raw);
       if (result && result.text) {
         setEnGreeting(result.text);
         persist({ enGreeting: result.text });
+      } else if (raw && raw.trim().length > 50) {
+        // Fallback: use raw text if JSON parse failed
+        const cleaned = raw.replace(/```json|```/g, "").trim();
+        const fallback = cleaned.startsWith("{") ? extractJSON(cleaned) : null;
+        const text = fallback?.text || cleaned;
+        setEnGreeting(text);
+        persist({ enGreeting: text });
       }
     } finally { setEnGreetLoading(false); }
   };
@@ -1605,20 +1614,29 @@ ${changeList}
           </div>
           <div>
             <Label>简历</Label>
-            <div style={{ display: "flex", gap: 20, marginBottom: 12 }}>
-              {[
-                { id: "base", label: baseResume ? "基础简历 (" + baseResume.length + "字)" : "无基础简历", disabled: !baseResume },
-                { id: "custom", label: "手动输入" },
-              ].map(opt => (
-                <button key={opt.id} onClick={() => !opt.disabled && setResumeSource(opt.id)} disabled={opt.disabled}
-                  style={{ background: "none", border: "none", borderBottom: "1.5px solid " + resumeSource === opt.id ? T.accent : "transparent", color: resumeSource === opt.id ? T.accent : opt.disabled ? T.subtle : T.muted, fontSize: 14, cursor: opt.disabled ? "not-allowed" : "pointer", fontFamily: T.body, paddingBottom: 4, opacity: opt.disabled ? 0.4 : 1 }}>
-                  {opt.label}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+              {resumes.map(r => (
+                <button key={r.id} onClick={() => { setResumeSource(r.id); }}
+                  style={{ background: resumeSource === r.id ? T.accent : T.surface, border: "1px solid " + (resumeSource === r.id ? T.accent : T.border), borderRadius: 6, padding: "5px 12px", color: resumeSource === r.id ? "#fff" : T.text, fontSize: 13, cursor: "pointer", fontFamily: T.body }}>
+                  {r.name}
                 </button>
               ))}
+              {resumes.length === 0 && baseResume && (
+                <button onClick={() => setResumeSource("base")}
+                  style={{ background: resumeSource === "base" ? T.accent : T.surface, border: "1px solid " + (resumeSource === "base" ? T.accent : T.border), borderRadius: 6, padding: "5px 12px", color: resumeSource === "base" ? "#fff" : T.text, fontSize: 13, cursor: "pointer", fontFamily: T.body }}>
+                  基础简历
+                </button>
+              )}
+              <button onClick={() => setResumeSource("custom")}
+                style={{ background: resumeSource === "custom" ? T.accent : T.surface, border: "1px solid " + (resumeSource === "custom" ? T.accent : T.border), borderRadius: 6, padding: "5px 12px", color: resumeSource === "custom" ? "#fff" : T.text, fontSize: 13, cursor: "pointer", fontFamily: T.body }}>
+                手动输入
+              </button>
             </div>
-            {resumeSource === "base" && baseResume && (
-              <p style={{ color: T.muted, fontSize: 13, lineHeight: 1.7 }}>{baseResume.slice(0, 100)}...</p>
-            )}
+            {resumeSource !== "custom" && (() => {
+              const found = resumes.find(r => r.id === resumeSource);
+              const text = found ? found.text : (resumeSource === "base" ? baseResume : "");
+              return text ? <p style={{ color: T.muted, fontSize: 13, lineHeight: 1.7 }}>{text.slice(0, 100)}...</p> : null;
+            })()}
             {resumeSource === "custom" && (
               <TA value={resume} onChange={setResume} rows={4} placeholder="粘贴简历内容..."/>
             )}
@@ -1893,16 +1911,33 @@ function AppTracker({ sessions, onStartPrep }) {
   const [filterStatus, setFilterStatus] = useState("全部");
   const [expandedId, setExpandedId] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [baseResume, setBaseResume] = useState("");
-  const [editingResume, setEditingResume] = useState(false);
+  const [resumes, setResumes] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("resume_library") || "null");
+      if (stored && Array.isArray(stored)) return stored;
+      // Migrate old single resume
+      const old = localStorage.getItem("base_resume");
+      if (old) return [{ id: "r1", name: "默认简历", text: old }];
+      return [];
+    } catch(e) { return []; }
+  });
+  const [editingResumeId, setEditingResumeId] = useState(null);
   const [resumeDraft, setResumeDraft] = useState("");
-  const [resumeInputMode, setResumeInputMode] = useState("paste");
-  const [ocrLoading, setOcrLoading] = useState(false);
+  const [resumeNameDraft, setResumeNameDraft] = useState("");
+  const [addingResume, setAddingResume] = useState(false);
   const resumeImgRef = useRef();
+
+  const saveResumes = (list) => {
+    localStorage.setItem("resume_library", JSON.stringify(list));
+    // Keep base_resume in sync for backward compat
+    if (list.length > 0) localStorage.setItem("base_resume", list[0].text);
+  };
+
+  // baseResume = first resume text for backward compat
+  const baseResume = resumes.length > 0 ? resumes[0].text : "";
 
   useEffect(() => {
     loadApps().then(setApps);
-    loadBaseResume().then(r => setBaseResume(r));
   }, []);
 
   const persist = (next) => { setApps(next); saveApps(next); };
@@ -1911,7 +1946,8 @@ function AppTracker({ sessions, onStartPrep }) {
     const newA = { ...draft, id: "a_" + Date.now() };
     persist([newA, ...apps]);
     // Save JD + resume into toolkit storage so AppToolkit loads them immediately
-    const effectiveResume = draftResumeSource === "base" ? baseResume : draftResume;
+    const effectiveResume = draftResumeSource === "custom" ? draftResume :
+      (resumes.find(r => r.id === draftResumeSource)?.text || (draftResumeSource === "base" ? baseResume : draftResume) || "");
     const toolkitData = { jd: draftJd, resume: draftResume, resumeSource: draftResumeSource, effectiveResume };
     try { localStorage.setItem("toolkit:" + newA.id, JSON.stringify(toolkitData)); } catch(e) {}
     // Kick off background generation if JD provided
@@ -1935,38 +1971,69 @@ function AppTracker({ sessions, onStartPrep }) {
   return (
     <div>
       <div style={{ marginBottom: 48, paddingBottom: 28, borderBottom: "1px solid " + T.border }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <div>
-            <p style={{ fontSize: 13, color: T.subtle, marginBottom: 4 }}>基础简历</p>
-            {baseResume
-              ? <p style={{ fontSize: 15, color: T.text }}>{baseResume.length} 字 <span style={{ color: T.subtle }}>{"\u00b7"} 已保存</span></p>
-              : <p style={{ fontSize: 15, color: T.subtle }}>未上传</p>}
-          </div>
-          <button onClick={() => { setResumeDraft(baseResume); setEditingResume(true); }} style={{ background: "none", border: "none", color: T.accent, fontSize: 13, cursor: "pointer", fontFamily: T.body, padding: 0 }}>
-            {baseResume ? "编辑" : "上传"}
-          </button>
-        </div> {editingResume && (
-          <div style={{ marginTop: 12 }}>
-            {resumeDraft && (
-              <div style={{ background: T.yellowDim, border: "1px solid " + T.yellow + "33", borderRadius: 10, padding: "8px 12px", marginBottom: 8 }}>
-                <p style={{ color: T.yellow, fontSize: 13, lineHeight: 1.6 }}>已有内容，继续编辑将覆盖原简历</p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
+          <p style={{ fontSize: 13, color: T.subtle }}>简历库 <span style={{ color: T.dim }}>({resumes.length}/3)</span></p>
+          {resumes.length < 3 && !addingResume && (
+            <button onClick={() => { setResumeDraft(""); setResumeNameDraft(""); setAddingResume(true); setEditingResumeId(null); }}
+              style={{ background: "none", border: "none", color: T.accent, fontSize: 13, cursor: "pointer", fontFamily: T.body, padding: 0 }}>+ 添加简历</button>
+          )}
+        </div>
+
+        {resumes.map((r) => (
+          <div key={r.id} style={{ marginBottom: 12, padding: "12px 14px", background: T.surface, borderRadius: 8, border: "1px solid " + T.border }}>
+            {editingResumeId === r.id ? (
+              <div>
+                <Inp value={resumeNameDraft} onChange={setResumeNameDraft} placeholder="简历名称（如：中文版、英文版、产品岗）"/>
+                <div style={{ marginTop: 8 }}>
+                  <TA value={resumeDraft} onChange={setResumeDraft} placeholder="粘贴简历文字内容..." rows={6}/>
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  <Btn size="sm" onClick={() => {
+                    if (!resumeDraft.trim()) return;
+                    const updated = resumes.map(x => x.id === r.id ? { ...x, name: resumeNameDraft || x.name, text: resumeDraft } : x);
+                    setResumes(updated); saveResumes(updated); setEditingResumeId(null);
+                  }} disabled={!resumeDraft.trim()}>保存</Btn>
+                  <Btn variant="ghost" size="sm" onClick={() => setEditingResumeId(null)}>取消</Btn>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: T.text, marginBottom: 2 }}>{r.name}</p>
+                  <p style={{ fontSize: 13, color: T.subtle }}>{r.text.length} 字</p>
+                </div>
+                <div style={{ display: "flex", gap: 12 }}>
+                  <button onClick={() => { setResumeDraft(r.text); setResumeNameDraft(r.name); setEditingResumeId(r.id); setAddingResume(false); }}
+                    style={{ background: "none", border: "none", color: T.accent, fontSize: 13, cursor: "pointer", fontFamily: T.body }}>编辑</button>
+                  <button onClick={() => { const updated = resumes.filter(x => x.id !== r.id); setResumes(updated); saveResumes(updated); }}
+                    style={{ background: "none", border: "none", color: T.red, fontSize: 13, cursor: "pointer", fontFamily: T.body }}>删除</button>
+                </div>
               </div>
             )}
-            <TA value={resumeDraft} onChange={setResumeDraft} placeholder="粘贴简历文字内容..." rows={8}/>
-            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-              <Btn size="sm" onClick={async () => {
-                setBaseResume(resumeDraft);
-                saveBaseResume(resumeDraft);
-                setEditingResume(false);
-                const parsed = await parseResumeToJSON(resumeDraft);
-                if (parsed) saveResumeJSON(parsed);
-              }} disabled={!resumeDraft.trim()}>确认保存</Btn>
-              <Btn variant="ghost" size="sm" onClick={() => setEditingResume(false)}>取消</Btn>
+          </div>
+        ))}
+
+        {resumes.length === 0 && !addingResume && (
+          <p style={{ color: T.subtle, fontSize: 13 }}>还没有简历，点「添加简历」上传</p>
+        )}
+
+        {addingResume && (
+          <div style={{ padding: "12px 14px", background: T.surface, borderRadius: 8, border: "1px solid " + T.border }}>
+            <Inp value={resumeNameDraft} onChange={setResumeNameDraft} placeholder="简历名称（如：中文版、英文版、产品岗）"/>
+            <div style={{ marginTop: 8 }}>
+              <TA value={resumeDraft} onChange={setResumeDraft} placeholder="粘贴简历文字内容..." rows={6}/>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <Btn size="sm" onClick={() => {
+                if (!resumeDraft.trim()) return;
+                const newR = { id: "r_" + Date.now(), name: resumeNameDraft || "简历 " + (resumes.length + 1), text: resumeDraft };
+                const updated = [...resumes, newR];
+                setResumes(updated); saveResumes(updated); setAddingResume(false); setResumeDraft(""); setResumeNameDraft("");
+              }} disabled={!resumeDraft.trim()}>保存</Btn>
+              <Btn variant="ghost" size="sm" onClick={() => setAddingResume(false)}>取消</Btn>
             </div>
           </div>
         )}
-        {!editingResume && !baseResume && (
-          <p style={{ color: T.muted, fontSize: 13, marginTop: 6 }}></p> )}
       </div>
       {jumpPromptApp && (
         <div style={{ paddingLeft: 16, borderLeft: "2px solid " + T.accent + "66", marginBottom: 40, display: "flex", gap: 20, alignItems: "baseline", flexWrap: "wrap" }}>
@@ -1988,7 +2055,7 @@ function AppTracker({ sessions, onStartPrep }) {
         </div>
       )}
       {!adding ? (
-        <button onClick={() => { setDraft(newApp()); setDraftJd(""); setDraftResumeSource(baseResume ? "base" : "custom"); setDraftResume(""); setAdding(true); }} style={{ background: "none", border: "none", color: T.muted, fontSize: 14, cursor: "pointer", fontFamily: T.body, padding: "0 0 36px 0", display: "block", textAlign: "left", letterSpacing: "-0.01em" }}>
+        <button onClick={() => { setDraft(newApp()); setDraftJd(""); setDraftResumeSource(resumes.length > 0 ? resumes[0].id : "custom"); setDraftResume(""); setAdding(true); }} style={{ background: "none", border: "none", color: T.muted, fontSize: 14, cursor: "pointer", fontFamily: T.body, padding: "0 0 36px 0", display: "block", textAlign: "left", letterSpacing: "-0.01em" }}>
           <span style={{ color: T.subtle, marginRight: 6 }}>+</span> 添加新投递
         </button>
       ) : (
@@ -2012,20 +2079,24 @@ function AppTracker({ sessions, onStartPrep }) {
               <TA value={draftJd} onChange={setDraftJd} rows={4} placeholder="粘贴职位描述 JD..."/>
             </div>
             <div>
-              <Label>简历来源</Label>
-              <div style={{ display: "flex", gap: 20, marginBottom: 12 }}>
-                {[
-                  { id: "base", label: baseResume ? "基础简历 (" + baseResume.length + "字)" : "无基础简历", disabled: !baseResume },
-                  { id: "custom", label: "手动输入" },
-                ].map(opt => (
-                  <button key={opt.id} onClick={() => !opt.disabled && setDraftResumeSource(opt.id)} disabled={opt.disabled}
-                    style={{ background: "none", border: "none", borderBottom: "1.5px solid " + (draftResumeSource === opt.id ? T.accent : "transparent"), color: draftResumeSource === opt.id ? T.accent : opt.disabled ? T.subtle : T.muted, fontSize: 14, cursor: opt.disabled ? "not-allowed" : "pointer", fontFamily: T.body, paddingBottom: 4, opacity: opt.disabled ? 0.4 : 1 }}>{opt.label}
+              <Label>选择简历</Label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                {resumes.map(r => (
+                  <button key={r.id} onClick={() => { setDraftResumeSource(r.id); setDraftResume(r.text); }}
+                    style={{ background: draftResumeSource === r.id ? T.accent : T.surface, border: "1px solid " + (draftResumeSource === r.id ? T.accent : T.border), borderRadius: 6, padding: "5px 12px", color: draftResumeSource === r.id ? "#fff" : T.text, fontSize: 13, cursor: "pointer", fontFamily: T.body }}>
+                    {r.name}
                   </button>
                 ))}
+                <button onClick={() => setDraftResumeSource("custom")}
+                  style={{ background: draftResumeSource === "custom" ? T.accent : T.surface, border: "1px solid " + (draftResumeSource === "custom" ? T.accent : T.border), borderRadius: 6, padding: "5px 12px", color: draftResumeSource === "custom" ? "#fff" : T.text, fontSize: 13, cursor: "pointer", fontFamily: T.body }}>
+                  手动输入
+                </button>
               </div>
-              {draftResumeSource === "base" && baseResume && (
-                <p style={{ color: T.muted, fontSize: 13, lineHeight: 1.7 }}>{baseResume.slice(0, 100)}...</p>
-              )}
+              {draftResumeSource !== "custom" && (() => {
+                const found = resumes.find(r => r.id === draftResumeSource);
+                const text = found ? found.text : (draftResumeSource === "base" ? baseResume : "");
+                return text ? <p style={{ color: T.muted, fontSize: 13, lineHeight: 1.7, marginTop: 8 }}>{text.slice(0, 100)}...</p> : null;
+              })()}
               {draftResumeSource === "custom" && (
                 <TA value={draftResume} onChange={setDraftResume} rows={4} placeholder="粘贴简历内容..."/>
               )}
@@ -2098,7 +2169,7 @@ function AppTracker({ sessions, onStartPrep }) {
             </div>
             {isExpanded && (
               <div style={{ paddingBottom: 32 }}>
-                <AppToolkit app={a} baseResume={baseResume}/>
+                <AppToolkit app={a} baseResume={baseResume} resumes={resumes}/>
                 <div style={{ paddingTop: 20, display: "flex", gap: 12, alignItems: "center" }}>
                   {linkedSession
                     ? <Btn variant="outline" size="sm" onClick={() => onStartPrep(linkedSession)}>继续面试准备</Btn>
