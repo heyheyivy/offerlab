@@ -10,9 +10,10 @@ export default async function handler(req, res) {
     const queries = [
       `${company} ${role} 面经`,
       `${company} ${role} 面试题 site:nowcoder.com OR site:zhihu.com`,
+      `${company} ${role} 面试 面经 site:xiaohongshu.com`,
     ];
 
-    // Run searches in parallel
+    // Run all three searches in parallel
     const searchResults = await Promise.allSettled(
       queries.map(q =>
         fetch("https://google.serper.dev/search", {
@@ -26,23 +27,38 @@ export default async function handler(req, res) {
       )
     );
 
-    const results = [];
-    for (const r of searchResults) {
-      if (r.status === "fulfilled" && r.value.organic) {
-        for (const item of r.value.organic) {
-          if (!results.find(x => x.link === item.link)) {
-            results.push({
-              title: item.title,
-              link: item.link,
-              snippet: item.snippet || "",
-              source: item.displayLink || item.link,
-            });
-          }
+    // Separate xiaohongshu results (index 2) from the rest so we can prioritize them
+    const xhsItems = [];
+    const otherItems = [];
+
+    searchResults.forEach((r, idx) => {
+      if (r.status !== "fulfilled" || !r.value.organic) return;
+      for (const item of r.value.organic) {
+        const entry = {
+          title: item.title,
+          link: item.link,
+          snippet: item.snippet || "",
+          source: item.displayLink || item.link,
+        };
+        if (idx === 2) {
+          xhsItems.push(entry);
+        } else {
+          otherItems.push(entry);
         }
+      }
+    });
+
+    // Merge: xiaohongshu first, then others, dedupe by link
+    const seen = new Set();
+    const results = [];
+    for (const item of [...xhsItems, ...otherItems]) {
+      if (!seen.has(item.link)) {
+        seen.add(item.link);
+        results.push(item);
       }
     }
 
-    const top = results.slice(0, 8);
+    const top = results.slice(0, 10);
 
     if (top.length === 0) {
       return res.status(200).json({ results: [], summary: null });
