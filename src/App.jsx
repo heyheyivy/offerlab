@@ -285,11 +285,16 @@ function PhaseJobInfo({ session, update, onNext }) {
           <div><Label>职位</Label><Inp value={session.role} onChange={v => update({ role: v })} placeholder="AI Product / Growth Lead"/></div>
         </div>
         {session.company && session.role && (
-          <div style={{ marginTop: 16 }}>
+          <div style={{ marginTop: 20, display: "flex", alignItems: "center", gap: 10 }}>
             <button onClick={handleResearch} disabled={researching}
-              style={{ background: "none", border: "none", color: researching ? T.subtle : T.accent, fontSize: 13, cursor: researching ? "default" : "pointer", fontFamily: T.body, padding: 0, letterSpacing: "0.01em" }}>
-              {researching ? "搜索中..." : "搜索面经"}
+              style={{ background: researching ? T.dim : T.green, border: "none", color: "#fff", fontSize: 13, fontWeight: 500, cursor: researching ? "default" : "pointer", fontFamily: T.body, padding: "8px 18px", borderRadius: 6, letterSpacing: "0.01em", transition: "background .15s", opacity: researching ? 0.7 : 1 }}>
+              {researching ? "搜索中..." : "🔍 搜索面经"}
             </button>
+            <a href={"https://www.xiaohongshu.com/search_result?keyword=" + encodeURIComponent(session.company + " " + session.role + " 面经")}
+              target="_blank" rel="noopener noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "#FF2442", border: "none", color: "#fff", fontSize: 13, fontWeight: 500, padding: "8px 18px", borderRadius: 6, textDecoration: "none", letterSpacing: "0.01em", whiteSpace: "nowrap" }}>
+              <span style={{ fontSize: 14 }}>📕</span> 小红书
+            </a>
           </div>
         )}
         {research && (
@@ -316,13 +321,11 @@ function PhaseJobInfo({ session, update, onNext }) {
                 <p style={{ color: T.subtle, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 14 }}>相关面经</p>
                 {research.results.slice(0, 10).map((r, i, arr) => {
                   const link = r.link || "";
-                  const isXhs = link.includes("xiaohongshu.com") || link.includes("xhslink.com");
                   const isNiuke = link.includes("nowcoder.com");
                   const domain = (r.source || link).replace(/^www\./, "").split("/")[0].split("?")[0];
                   return (
                     <div key={i} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: i < arr.length - 1 ? "1px solid " + T.border : "none" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4, flexWrap: "wrap" }}>
-                        {isXhs && <span style={{ fontSize: 10, color: "#FF2442", background: "#FFF0F2", border: "1px solid #FFCDD4", borderRadius: 3, padding: "1px 5px", fontWeight: 500, lineHeight: 1.6 }}>小红书</span>}
                         {isNiuke && <span style={{ fontSize: 10, color: T.green, background: T.greenDim, border: "1px solid #C0DDD0", borderRadius: 3, padding: "1px 5px", lineHeight: 1.6 }}>牛客</span>}
                         <span style={{ color: T.subtle, fontSize: 11 }}>{domain}</span>
                       </div>
