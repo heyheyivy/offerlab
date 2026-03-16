@@ -287,44 +287,47 @@ function PhaseJobInfo({ session, update, onNext }) {
         {session.company && session.role && (
           <div style={{ marginTop: 16 }}>
             <button onClick={handleResearch} disabled={researching}
-              style={{ background: "none", border: "none", color: researching ? T.subtle : T.accent, fontSize: 13, cursor: researching ? "default" : "pointer", fontFamily: T.body, padding: 0 }}>
-              {researching ? "搜索中..." : "🔍 搜索面经"}
+              style={{ background: "none", border: "none", color: researching ? T.subtle : T.accent, fontSize: 13, cursor: researching ? "default" : "pointer", fontFamily: T.body, padding: 0, letterSpacing: "0.01em" }}>
+              {researching ? "搜索中..." : "搜索面经"}
             </button>
           </div>
         )}
         {research && (
-          <div style={{ marginTop: 20, padding: "20px", background: T.surface, borderRadius: 10, border: "1px solid " + T.border }}>
+          <div style={{ marginTop: 20, animation: "fadeUp .3s ease both" }}>
             {research.summary && (
-              <div style={{ marginBottom: 20 }}>
-                <p style={{ color: T.subtle, fontSize: 11, letterSpacing: "0.08em", marginBottom: 12 }}>常见考察点</p>
+              <div style={{ marginBottom: 24, padding: "18px 20px", background: T.surface, borderRadius: 10, border: "1px solid " + T.border }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
+                  <p style={{ color: T.subtle, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase" }}>常见考察点</p>
+                  <p style={{ color: T.subtle, fontSize: 11 }}>已纳入面试题生成</p>
+                </div>
                 {(research.summary.questions || []).map((q, i) => (
-                  <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8 }}>
-                    <span style={{ color: T.accent, fontSize: 12, minWidth: 18, flexShrink: 0 }}>{String(i+1).padStart(2,"0")}</span>
+                  <div key={i} style={{ display: "flex", gap: 12, marginBottom: 10, paddingBottom: 10, borderBottom: i < (research.summary.questions.length - 1) ? "1px solid " + T.border : "none" }}>
+                    <span style={{ color: T.accent, fontSize: 11, fontWeight: 500, minWidth: 18, flexShrink: 0, marginTop: 2 }}>{String(i+1).padStart(2,"0")}</span>
                     <p style={{ color: T.text, fontSize: 13, lineHeight: 1.7 }}>{q}</p>
                   </div>
                 ))}
                 {research.summary.tips && (
-                  <p style={{ color: T.muted, fontSize: 12, marginTop: 12, paddingTop: 12, borderTop: "1px solid " + T.border }}>{research.summary.tips}</p>
+                  <p style={{ color: T.muted, fontSize: 12, marginTop: 12, paddingTop: 12, borderTop: "1px solid " + T.border, lineHeight: 1.7 }}>{research.summary.tips}</p>
                 )}
               </div>
             )}
             {research.results && research.results.length > 0 && (
-              <div>
-                <p style={{ color: T.subtle, fontSize: 11, letterSpacing: "0.08em", marginBottom: 12 }}>相关面经链接</p>
-                {research.results.slice(0, 6).map((r, i) => (
-                  <div key={i} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: i < 5 ? "1px solid " + T.border : "none" }}>
+              <div style={{ padding: "18px 20px", background: T.surface, borderRadius: 10, border: "1px solid " + T.border }}>
+                <p style={{ color: T.subtle, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 14 }}>相关面经</p>
+                {research.results.slice(0, 5).map((r, i) => (
+                  <div key={i} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: i < 4 ? "1px solid " + T.border : "none" }}>
                     <a href={r.link} target="_blank" rel="noopener noreferrer"
-                      style={{ color: T.accent, fontSize: 13, textDecoration: "none", display: "block", marginBottom: 2 }}>
+                      style={{ color: T.text, fontSize: 13, textDecoration: "none", fontWeight: 500, lineHeight: 1.5, display: "block", marginBottom: 3 }}>
                       {r.title}
                     </a>
-                    <p style={{ color: T.subtle, fontSize: 11 }}>{r.source}</p>
-                    {r.snippet && <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6, marginTop: 3 }}>{r.snippet.slice(0, 100)}...</p>}
+                    <p style={{ color: T.subtle, fontSize: 11, marginBottom: r.snippet ? 4 : 0 }}>{r.source}</p>
+                    {r.snippet && <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6 }}>{r.snippet.slice(0, 120)}...</p>}
                   </div>
                 ))}
               </div>
             )}
             <button onClick={handleResearch} disabled={researching}
-              style={{ background: "none", border: "none", color: T.subtle, fontSize: 12, cursor: "pointer", fontFamily: T.body, marginTop: 8, padding: 0 }}>
+              style={{ background: "none", border: "none", color: T.subtle, fontSize: 12, cursor: "pointer", fontFamily: T.body, marginTop: 10, padding: 0 }}>
               {researching ? "搜索中..." : "重新搜索"}
             </button>
           </div>
@@ -512,7 +515,10 @@ function PhaseMock({ session, update, onNext }) {
     const langRule = needBilingual
       ? "语言规则：检测到英文简历或JD，每道题先用中文出题，附英文翻译，格式：中文题目 (English: English translation)"
       : "语言规则：全部用中文出题。";
-    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${resumeText}\n\n请生成5道有针对性的面试题，覆盖不同考察维度。${langRule}\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"3-5句参考答案要点","tips":"回答思路提示"}]}\n共5题，难度适中，针对${round || "本轮"}面试。`;
+    const researchHints = session.research?.summary?.questions?.length
+      ? "\n网上面经中常见考察点（参考这些出题，不要照抄）：\n" + session.research.summary.questions.slice(0,5).map((q,i) => `${i+1}. ${q}`).join("\n")
+      : "";
+    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${resumeText}${researchHints}\n\n请生成5道有针对性的面试题，覆盖不同考察维度。${langRule}\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"3-5句参考答案要点","tips":"回答思路提示"}]}\n共5题，难度适中，针对${round || "本轮"}面试。`;
 
     try {
       const system = "你是专业面试官，只输出合法JSON，不含任何markdown，不含代码块，直接输出{开头的JSON，用中文。";
