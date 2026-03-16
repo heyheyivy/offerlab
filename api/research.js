@@ -8,57 +8,53 @@ export default async function handler(req, res) {
 
   try {
     const queries = [
-      // General: Google, Chinese interview sites
+      // General Google: interview experience
       {
-        payload: { q: `${company} ${role} 面经`, gl: "cn", hl: "zh-cn", num: 6 },
-        engine: "google",
+        body: { q: `${company} ${role} 面经`, gl: "cn", hl: "zh-cn", num: 6 },
       },
       // Nowcoder + Zhihu targeted
       {
-        payload: { q: `${company} ${role} 面试题 site:nowcoder.com OR site:zhihu.com`, gl: "cn", hl: "zh-cn", num: 6 },
-        engine: "google",
+        body: { q: `${company} ${role} 面试题 site:nowcoder.com OR site:zhihu.com`, gl: "cn", hl: "zh-cn", num: 6 },
       },
-      // Xiaohongshu via Baidu (better XHS indexing than Google)
+      // Xiaohongshu via Baidu — force 面经 intent to avoid job listings
       {
-        payload: { q: `${company} ${role} 面经 site:xiaohongshu.com`, gl: "cn", hl: "zh-cn", num: 6 },
-        engine: "baidu",
-      },
-      // Xiaohongshu keyword trick on Google — returns aggregator pages + some direct links
-      {
-        payload: { q: `小红书 ${company} ${role} 面经`, gl: "cn", hl: "zh-cn", num: 6 },
-        engine: "google",
+        body: { q: `${company} ${role} 面经 面试经验`, gl: "cn", hl: "zh-cn", num: 6, engine: "baidu" },
       },
     ];
 
     const searchResults = await Promise.allSettled(
-      queries.map(({ payload, engine }) =>
-        fetch(`https://google.serper.dev/${engine === "baidu" ? "search" : "search"}`, {
+      queries.map(({ body }) =>
+        fetch("https://google.serper.dev/search", {
           method: "POST",
           headers: {
             "X-API-KEY": process.env.SERPER_API_KEY,
             "Content-Type": "application/json",
           },
-          // Serper supports engine param for Baidu
-          body: JSON.stringify({ ...payload, ...(engine === "baidu" ? { engine: "baidu" } : {}) }),
+          body: JSON.stringify(body),
         }).then(r => r.json())
       )
     );
 
-    // Collect xhs items first for priority ordering
+    // Collect xhs items separately for priority
     const xhsItems = [];
     const otherItems = [];
 
-    searchResults.forEach((r, idx) => {
+    searchResults.forEach((r) => {
       if (r.status !== "fulfilled") return;
       const organic = r.value.organic || [];
       for (const item of organic) {
         const link = item.link || "";
+        // Skip job listing pages — not interview experience posts
+        const isJobListing = /recruit|job|jobs|career|careers|hire|hiring|apply|zhaopin|lagou|liepin|51job|boss\.zhipin|job\.toutiao|job\.bytedance/i.test(link);
+        if (isJobListing) continue;
+
         const entry = {
           title: item.title || "",
           link,
           snippet: item.snippet || "",
           source: item.displayLink || link,
         };
+
         const isXhs = link.includes("xiaohongshu.com") || link.includes("xhslink.com");
         if (isXhs) {
           xhsItems.push(entry);
