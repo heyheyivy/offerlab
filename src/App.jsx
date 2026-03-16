@@ -617,7 +617,7 @@ function PhaseMock({ session, update, onNext }) {
               {evalLoading ? <><Spinner/> 评分中...</> : rounds[activeQ]>=3 ? "已练习 3 次" : rounds[activeQ]>0 ? "再次评分 (" + rounds[activeQ] + "/3)" : "提交回答"}
             </Btn>
             {activeQ < questions.length-1 && (
-              <button onClick={() => setActiveQSafe(activeQ+1)} style={{ background: "none", border: "none", color: T.muted, fontSize: 14, cursor: "pointer", fontFamily: T.body }}>{"下一题 \u2192"}</button>
+              <>{activeQ > 0 && <button onClick={() => setActiveQSafe(activeQ-1)} style={{ background: "none", border: "none", color: T.muted, fontSize: 14, cursor: "pointer", fontFamily: T.body }}>{"\u2190 上一题"}</button>}<button onClick={() => setActiveQSafe(activeQ+1)} style={{ background: "none", border: "none", color: T.muted, fontSize: 14, cursor: "pointer", fontFamily: T.body }}>{"下一题 \u2192"}</button></>
             )}
           </div>
         </div>
@@ -1754,9 +1754,9 @@ ${changeList}
                       <p style={{ color: T.green, fontSize: 13, marginBottom: 16 }}>已根据 {acceptedCount} 条建议生成优化简历</p>
                     ) : null}
                     <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-                      <Btn size="sm" disabled={!optimized || building} onClick={() => { const el = document.createElement("textarea"); el.value = optimized; el.style.position="fixed"; el.style.opacity="0"; document.body.appendChild(el); el.focus(); el.select(); document.execCommand("copy"); document.body.removeChild(el); setResumeCopied(true); setTimeout(() => setResumeCopied(false), 2000); }}>{resumeCopied ? "已复制" : building ? "生成中..." : "复制优化简历"}</Btn>
-                      <Btn variant="ghost" size="sm" disabled={!optimized || wordLoading || building} onClick={() => handleWordDownload()}>{wordLoading ? "生成中..." : "下载 Word"}</Btn>
-                      {optimized && !building && <button onClick={() => setShowResumePreview(v => !v)} style={{ background: "none", border: "none", color: T.muted, fontSize: 13, cursor: "pointer", fontFamily: T.body }}>{showResumePreview ? "收起" : "预览"}</button>}
+                      <Btn size="sm" disabled={!optimized || building || acceptedCount === 0} onClick={() => { const el = document.createElement("textarea"); el.value = optimized; el.style.position="fixed"; el.style.opacity="0"; document.body.appendChild(el); el.focus(); el.select(); document.execCommand("copy"); document.body.removeChild(el); setResumeCopied(true); setTimeout(() => setResumeCopied(false), 2000); }}>{resumeCopied ? "已复制" : building ? "生成中..." : "复制优化简历"}</Btn>
+                      <Btn variant="ghost" size="sm" disabled={!optimized || wordLoading || building || acceptedCount === 0} onClick={() => handleWordDownload()}>{wordLoading ? "生成中..." : "下载 Word"}</Btn>
+                      {optimized && !building && acceptedCount > 0 && <button onClick={() => setShowResumePreview(v => !v)} style={{ background: "none", border: "none", color: T.muted, fontSize: 13, cursor: "pointer", fontFamily: T.body }}>{showResumePreview ? "收起" : "预览"}</button>}
                     </div>
                     {showResumePreview && optimized && (
                       <div style={{ marginTop: 20, borderTop: "1px solid " + T.border, paddingTop: 16 }}>
@@ -2184,7 +2184,7 @@ export default function App() {
           <Btn size="sm" onClick={() => handleStartPrep(null, {})}>新建面试准备</Btn>
         </div>
 
-        <div style={{ maxWidth: 660, margin: "0 auto", padding: "60px 32px 100px" }}>
+        <div style={{ maxWidth: 660, margin: "0 auto", padding: "40px 16px 80px" }}>
 
           <div style={{ display: "flex", gap: 28, marginBottom: 52, borderBottom: "1px solid " + T.border, paddingBottom: 0 }}>
             {[{ id: "tracker", label: "投递追踪" }, { id: "sessions", label: "面试准备" }].map(t => (
@@ -2274,7 +2274,7 @@ export default function App() {
           </div>
         </div>
 
-        <div style={{ maxWidth: 620, margin: "0 auto", padding: "56px 32px 100px", animation: "fadeUp .3s ease both" }}>
+        <div style={{ maxWidth: 620, margin: "0 auto", padding: "40px 16px 80px", animation: "fadeUp .3s ease both" }}>
           <p style={{ color: T.subtle, fontSize: 12, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 40 }}>{PHASE_LABELS[PHASE_STEP_MAP.indexOf(phase)] || ""}</p>
 
           {/* Scroll to top only when phase changes */}
@@ -2282,7 +2282,7 @@ export default function App() {
           {phase === 0 && <PhaseJobInfo session={current} update={updateCurrent} onNext={advancePhase}/>}
           {phase === 1 && <PhaseMock session={current} update={updateCurrent} onNext={advancePhase}/>}
           {phase === 2 && <PhaseAnalysis session={current} update={updateCurrent} onDone={advancePhase}/>}
-          {phase === 3 && <PhaseResults session={current} onNextRound={startNextRound} onReview={() => updateCurrent({ phase: 4 })}/>}
+          {phase === 3 && <PhaseResults session={current} onNextRound={startNextRound} onReview={() => { updateCurrent({ phase: 4 }); setTimeout(() => window.scrollTo(0, 0), 50); }}/>}
           {phase === 4 && <PhaseReview session={current} update={updateCurrent} onBack={() => updateCurrent({ phase: 3 })} onNextRound={startNextRound}/>}
         </div>
       </div>
