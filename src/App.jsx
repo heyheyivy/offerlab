@@ -1239,32 +1239,76 @@ async function ocrImages(files) {
 
 //  Word download helper (browser-side) 
 function downloadAsWord(text, filename) {
-  const tag = (t, content, attrs) => {
-    const a = attrs ? "" + attrs : "";
-    return "<" + t + a + ">" + content + "</" + t + ">";
-  };
-  const css = "body{font-family:Arial,sans-serif;font-size:11pt;margin:2cm}" +
-    "h1{font-size:18pt;text-align:center;margin-bottom:4pt}" +
-    "h2{font-size:13pt;border-bottom:1px solid #7C6AF7;margin-top:14pt;margin-bottom:4pt}" +
-    "p{margin:3pt 0;line-height:1.5}.bullet{margin-left:20pt}";
+  // Build RTF — proper format Word actually respects
+  const esc = (s) => s
+    .replace(/\\/g, "\\\\")
+    .replace(/\{/g, "\\{")
+    .replace(/\}/g, "\\}")
+    .replace(/[^\x00-\x7F]/g, c => {
+      const code = c.charCodeAt(0);
+      if (code < 32768) return "\\u" + code + "?";
+      return "\\u" + (code - 65536) + "?";
+    });
+
   const lines = text.split("\n").map(l => l.trim());
   let body = "";
+
+  // RTF paragraph styles:
+  // \sb = space before (twips), \sa = space after, \sl = line spacing
+  // \fs = font size in half-points (22 = 11pt, 20 = 10pt, 26 = 13pt, 32 = 16pt)
+  // \b = bold, \b0 = end bold
+
   let isFirst = true;
   for (const line of lines) {
-    if (!line) { body += "<br>"; continue; }
-    const isSection = /^(|||||||||||)/.test(line) || (line.length < 20 && /[:]/.test(line));
-    const isBullet = /^[•·]/.test(line);
-    if (isFirst) { body += tag("h1", line); isFirst = false; }
-    else if (isSection) { body += tag("h2", line); }
-    else if (isBullet) { body += tag("p", line, 'class="bullet"'); }
-    else { body += tag("p", line); }
+    if (!line) {
+      body += "{\\pard\\sb0\\sa80\\sl240\\slmult1\\par}\n";
+      continue;
+    }
+
+    const isName = isFirst;
+    const isSection = !isFirst && (
+      /^(EDUCATION|EXPERIENCE|SKILLS|PROFESSIONAL|SUMMARY|WORK|PROJECTS|AWARDS|LANGUAGES|CERTIFICATIONS|教育|工作经历|实习|技能|项目|荣誉|证书|语言)/.test(line.toUpperCase()) ||
+      (line.length < 30 && line === line.toUpperCase() && /[A-Z\u4e00-\u9fa5]/.test(line))
+    );
+    const isBullet = /^[•·\-\*]/.test(line);
+    const isContactLine = isFirst === false && !isSection && !isBullet && line.includes("|") && line.length < 120;
+
+    if (isName) {
+      // Name: centered, 16pt bold
+      body += `{\\pard\\qc\\sb0\\sa60\\b\\fs32 ${esc(line)}\\b0\\par}\n`;
+      isFirst = false;
+    } else if (isContactLine) {
+      // Contact info: centered, 9pt
+      body += `{\\pard\\qc\\sb0\\sa80\\fs18 ${esc(line)}\\par}\n`;
+    } else if (isSection) {
+      // Section header: 11pt bold, line below via bottom border
+      body += `{\\pard\\sb180\\sa60\\brdrb\\brdrs\\brdrw10\\brdrcf1\\b\\fs22 ${esc(line.toUpperCase())}\\b0\\par}\n`;
+    } else if (isBullet) {
+      // Bullet: 10pt, indented
+      const content = line.replace(/^[•·\-\*]\s*/, "");
+      body += `{\\pard\\li280\\fi-280\\sb0\\sa40\\fs20 \\bullet  ${esc(content)}\\par}\n`;
+    } else {
+      // Regular: 10pt
+      body += `{\\pard\\sb0\\sa40\\fs20 ${esc(line)}\\par}\n`;
+    }
   }
-  const head = tag("meta", "", 'charset="utf-8"') + tag("style", css);
-  const doc = tag("head", head) + tag("body", body);
-  const html = "<" + "html>" + doc + "</" + "html>";
-  const blob = new Blob(["\ufeff" + html], { type: "application/msword;charset=utf-8" });
+
+  const rtf = `{\\rtf1\\ansi\\deff0
+{\\fonttbl{\\f0\\fswiss\\fcharset0 Arial;}{\\f1\\fswiss\\fcharset0 Calibri;}}
+{\\colortbl;\\red100\\green100\\blue100;}
+{\\*\\generator OfferLab;}
+\\paperw12240\\paperh15840
+\\margl1080\\margr1080\\margt1080\\margb1080
+\\widowctrl\\hyphauto
+\\f1\\fs20
+${body}}`;
+
+  const blob = new Blob([rtf], { type: "application/rtf" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename.replace(/\.doc$/, ".rtf");
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
