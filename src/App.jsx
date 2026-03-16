@@ -1998,9 +1998,29 @@ function AppTracker({ sessions, onStartPrep }) {
       )}
 
       {apps.length === 0 && !adding && (
-        <div style={{ padding: "60px 0", animation: "fadeUp .5s ease both" }}>
-          <p style={{ fontSize: 22, color: T.text, marginBottom: 10, letterSpacing: "-0.02em", fontFamily: T.head, fontWeight: 400 }}>还没有投递记录</p>
-          <p style={{ fontSize: 15, color: T.muted, lineHeight: 1.85 }}>添加一条投递，开始记录你的求职进度</p>
+        <div style={{ padding: "48px 0", animation: "fadeUp .5s ease both" }}>
+          {/* Hero */}
+          <p style={{ fontSize: 26, color: T.text, marginBottom: 10, letterSpacing: "-0.03em", fontFamily: T.head, fontWeight: 400 }}>AI 求职全流程助手</p>
+          <p style={{ fontSize: 15, color: T.muted, lineHeight: 1.85, marginBottom: 40, maxWidth: 420 }}>从投递到拿 Offer，帮你生成招呼语、优化简历、模拟面试、复盘真实表现。</p>
+
+          {/* Steps */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 0, marginBottom: 40 }}>
+            {[
+              { n: "01", title: "添加投递记录", desc: "记录你投递的公司和职位，粘贴 JD 后 AI 自动生成招呼语和简历优化建议" },
+              { n: "02", title: "AI 模拟面试", desc: "针对 JD 生成 5 道面试题，语音或文字作答，AI 实时评分并给出改进建议" },
+              { n: "03", title: "真实面试复盘", desc: "面试结束后粘贴转录或实时录音，AI 深度分析你的表现并给出行动建议" },
+            ].map((s, i) => (
+              <div key={i} style={{ display: "flex", gap: 20, padding: "20px 0", borderBottom: "1px solid " + T.border }}>
+                <span style={{ color: T.accent, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", minWidth: 24, marginTop: 3 }}>{s.n}</span>
+                <div>
+                  <p style={{ color: T.text, fontSize: 15, fontWeight: 500, marginBottom: 4 }}>{s.title}</p>
+                  <p style={{ color: T.muted, fontSize: 13, lineHeight: 1.7 }}>{s.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p style={{ fontSize: 13, color: T.subtle }}>点击上方「+ 添加新投递」开始</p>
         </div>
       )}
       {filtered.map((a, i) => {
@@ -2160,7 +2180,7 @@ export default function App() {
     return (
       <div style={{ minHeight: "100vh", background: T.bg }}>
         <div style={{ padding: "22px 48px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, background: T.bg, borderBottom: "1px solid " + T.border }}>
-          <span style={{ color: T.text, fontWeight: 500, fontSize: 15, fontFamily: T.body, letterSpacing: "-0.02em" }}>JobMind</span>
+          <span style={{ color: T.text, fontWeight: 500, fontSize: 15, fontFamily: T.body, letterSpacing: "-0.02em" }}>OfferLab</span>
           <Btn size="sm" onClick={() => handleStartPrep(null, {})}>新建面试准备</Btn>
         </div>
 
