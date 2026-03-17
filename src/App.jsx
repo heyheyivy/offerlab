@@ -1123,60 +1123,34 @@ ${compressed.slice(0, 2000)}
   return (
     <div>
       <div style={{ marginBottom: 44 }}>
-        <h2 style={{ color: T.text, fontSize: 28, fontWeight: 400, letterSpacing: "-0.03em", marginBottom: 10, fontFamily: T.head }}>真实面试复盘</h2>
+        <h2 style={{ color: T.text, fontSize: 28, fontWeight: 400, letterSpacing: "-0.03em", marginBottom: 10, fontFamily: T.head }}>面试复盘</h2>
         <p style={{ color: T.muted, fontSize: 14 }}>{session.company}{session.role ? " · " + session.role : ""}{round ? " · " + round : ""}</p>
       </div>
       {!result && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-
-          {/* Mode selector — only 2 modes */}
-          <div style={{ display: "flex", gap: 0, borderRadius: 8, border: "1px solid " + T.border, overflow: "hidden" }}>
-            {[
-              { id: "record", label: "实时录音转文字" },
-              { id: "paste",  label: "粘贴文字" },
-            ].map((m, idx) => (
-              <button key={m.id} onClick={() => setInputMode(m.id)} style={{ flex: 1, padding: "10px 0", border: "none", borderRight: idx === 0 ? "1px solid " + T.border : "none", background: inputMode === m.id ? T.accent : T.surface, color: inputMode === m.id ? "#fff" : T.muted, fontSize: 13, cursor: "pointer", fontFamily: T.body, transition: "all .15s" }}>
-                {m.label}
-              </button>
-            ))}
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <div style={{ padding: "14px 16px", background: T.yellowDim, borderRadius: 8, border: "1px solid " + T.yellow + "44" }}>
+            <p style={{ color: T.yellow, fontSize: 12, lineHeight: 1.7, margin: 0 }}>
+              请确保你上传的面试内容符合当地法律法规及面试方要求。本工具仅用于个人学习与复盘，请勿在未经许可的情况下录音或记录他人谈话。
+            </p>
           </div>
-          <p style={{ color: T.subtle, fontSize: 12, marginTop: 8 }}>建议用录音软件录完后转文字粘贴，效果更准确</p>
-          {inputMode === "record" && (
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <p style={{ color: T.subtle, fontSize: 12, fontWeight: 500, letterSpacing: "0.06em" }}>实时识别 · Chrome / Edge</p>
-                <button
-                  onClick={recording ? stopRecording : startRecording}
-                  style={{ display: "flex", alignItems: "center", gap: 6, background: recording ? T.red+"11" : "none", border: "1px solid " + (recording ? T.red : T.border), borderRadius: 20, padding: "5px 14px", color: recording ? T.red : T.muted, fontSize: 12, cursor: "pointer", fontFamily: T.body, transition: "all .2s", boxShadow: recording ? "0 0 0 3px " + T.red + "18" : "none" }}>
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: recording ? T.red : T.subtle, display: "inline-block", flexShrink: 0, animation: recording ? "pulse 1s infinite" : "none" }}/>
-                  {recording ? "录音中" : "开始录音"}
-                </button>
+          <div>
+            <p style={{ color: T.subtle, fontSize: 12, marginBottom: 8 }}>粘贴面试内容（支持以下来源）</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+              {["面试结束后凭记忆整理的问答", "会议软件自动生成的字幕 / 转录文本", "语音备忘录转文字结果"].map((tip, i) => (
+                <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                  <span style={{ color: T.accent, fontSize: 12, flexShrink: 0, marginTop: 1 }}>·</span>
+                  <span style={{ color: T.muted, fontSize: 13 }}>{tip}</span>
+                </div>
+              ))}
+            </div>
+            <TA value={transcript} onChange={setTranscript} rows={10} placeholder="面试官：请做一个自我介绍&#10;我：...&#10;&#10;面试官：你为什么选择我们公司？&#10;我：..."/>
+            {transcript.length > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                <p style={{ color: T.subtle, fontSize: 12 }}>{transcript.length} 字</p>
+                <button onClick={() => setTranscript("")} style={{ background: "none", border: "none", color: T.subtle, fontSize: 12, cursor: "pointer", fontFamily: T.body }}>清空</button>
               </div>
-              {/* Interim preview */}
-              {recording && (
-                <div style={{ marginBottom: 8, padding: "10px 14px", borderRadius: 8, background: T.red+"08", border: "1px solid " + T.red+"33", minHeight: 36 }}>
-                  <p style={{ color: T.red, fontSize: 13, lineHeight: 1.6, margin: 0, fontStyle: interim ? "normal" : "italic" }}>
-                    {interim || "请说话..."}
-                  </p>
-                </div>
-              )}
-              <TA value={transcript} onChange={setTranscript} rows={8} placeholder="识别的文字会实时出现在这里，也可以手动编辑..."/>
-              {transcript.length > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-                  <p style={{ color: T.subtle, fontSize: 12 }}>{transcript.length} 字</p>
-                  <button onClick={() => setTranscript("")} style={{ background: "none", border: "none", color: T.subtle, fontSize: 12, cursor: "pointer", fontFamily: T.body }}>清空</button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Paste mode */}
-          {inputMode === "paste" && (
-            <div>
-              <TA value={transcript} onChange={setTranscript} rows={10} placeholder="粘贴面试录音转录文字..."/>
-              {transcript.length > 0 && <p style={{ color: T.subtle, fontSize: 12, marginTop: 6 }}>{transcript.length} 字</p>}
-            </div>
-          )}
+            )}
+          </div>
 
           {qs.length > 0 && (
             <div>
