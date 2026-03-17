@@ -1372,7 +1372,7 @@ function downloadAsWord(text, filename) {
   const DATE_RE = /\d{4}[./]\d{2}|\d{4}\s*[-\u2013]\s*(\d{4}|present|\u81f3\u4eca|now)/i;
 
   for (const line of lines) {
-    if (!line) { body += "{\\pard\\sb0\\sa60\\par}\n"; continue; }
+    if (!line) { body += "{\\pard\\sb0\\sa15\\par}\n"; continue; }
 
     const isName = isFirst;
     const upperLine = line.toUpperCase();
@@ -1386,30 +1386,30 @@ function downloadAsWord(text, filename) {
     const hasDate = DATE_RE.test(line);
 
     if (isName) {
-      body += "{\\pard\\qc\\sb0\\sa80\\b\\fs28 " + esc(line) + "\\b0\\par}\n";
+      body += "{\\pard\\qc\\sb0\\sa30\\b\\fs24 " + esc(line) + "\\b0\\par}\n";
       isFirst = false;
     } else if (isContact) {
-      body += "{\\pard\\qc\\sb0\\sa60\\fs18 " + esc(line) + "\\par}\n";
+      body += "{\\pard\\qc\\sb0\\sa25\\fs17 " + esc(line) + "\\par}\n";
     } else if (isSection) {
-      body += "{\\pard\\sb200\\sa60\\brdrb\\brdrs\\brdrw10\\brdrcf1\\b\\fs22 " + esc(line) + "\\b0\\par}\n";
+      body += "{\\pard\\sb100\\sa25\\brdrb\\brdrs\\brdrw8\\brdrcf1\\b\\fs20 " + esc(line) + "\\b0\\par}\n";
     } else if (isBullet) {
       const cnt = line.replace(/^[\u2022\u00b7\-\*]\s*/, "");
-      body += "{\\pard\\li360\\fi-180\\sb0\\sa40\\fs20 \\bullet  " + esc(cnt) + "\\par}\n";
+      body += "{\\pard\\li280\\fi-140\\sb0\\sa15\\fs18 \\bullet  " + esc(cnt) + "\\par}\n";
     } else if (hasDate) {
       const dateMatch = line.match(/(\d{4}[./\s\-\u2013].{3,20}?)\s*$/);
       if (dateMatch) {
         const dateStr = dateMatch[1].trim();
         const mainStr = line.slice(0, line.lastIndexOf(dateStr)).replace(/[|\u00b7\s]+$/, "").trim();
         if (mainStr) {
-          body += "{\\pard\\sb80\\sa20\\fs20\\tqr\\tx9360 \\b " + esc(mainStr) + "\\b0\\tab " + esc(dateStr) + "\\par}\n";
+          body += "{\\pard\\sb40\\sa8\\fs18\\tqr\\tx10800 \\b " + esc(mainStr) + "\\b0\\tab " + esc(dateStr) + "\\par}\n";
         } else {
-          body += "{\\pard\\sb80\\sa20\\fs20 " + esc(line) + "\\par}\n";
+          body += "{\\pard\\sb40\\sa8\\fs18 " + esc(line) + "\\par}\n";
         }
       } else {
-        body += "{\\pard\\sb80\\sa20\\b\\fs20 " + esc(line) + "\\b0\\par}\n";
+        body += "{\\pard\\sb40\\sa8\\b\\fs18 " + esc(line) + "\\b0\\par}\n";
       }
     } else {
-      body += "{\\pard\\sb0\\sa40\\fs20 " + esc(line) + "\\par}\n";
+      body += "{\\pard\\sb0\\sa15\\fs18 " + esc(line) + "\\par}\n";
     }
   }
 
@@ -1418,9 +1418,9 @@ function downloadAsWord(text, filename) {
     "{\\colortbl;\\red80\\green80\\blue80;}\n" +
     "{\\*\\generator OfferLab;}\n" +
     "\\paperw12240\\paperh15840\n" +
-    "\\margl1080\\margr1080\\margt900\\margb900\n" +
+    "\\margl720\\margr720\\margt600\\margb600\n" +
     "\\widowctrl\\hyphauto\n" +
-    "\\f0\\fs20\n" +
+    "\\f0\\fs18\n" +
     body + "}";
 
   const blob = new Blob([rtf], { type: "application/rtf" });
