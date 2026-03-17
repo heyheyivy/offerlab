@@ -727,10 +727,10 @@ function PhaseMock({ session, update, onNext }) {
           {/* Strengths block */}
           {fb.strengths && (
             <div style={{ marginBottom: 20 }}>
-              <p style={{ color: T.green, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>优点</p>
-              {fb.strengths.split(/[；;]|\d+[)）]\s*/).filter(s => s.trim()).map((s, i) => (
+              <p style={{ color: T.subtle, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>优点</p>
+              {fb.strengths.split(/[；;]|\d+[)）.．]\s*/).filter(s => s.trim()).map((s, i) => (
                 <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8 }}>
-                  <span style={{ color: T.green, fontSize: 12, flexShrink: 0, marginTop: 3 }}>{"+"}</span>
+                  <span style={{ color: T.green, fontSize: 13, fontWeight: 500, flexShrink: 0, minWidth: 16 }}>{i + 1}</span>
                   <p style={{ color: T.text, fontSize: 14, lineHeight: 1.8, margin: 0 }}>{s.trim()}</p>
                 </div>
               ))}
@@ -739,10 +739,10 @@ function PhaseMock({ session, update, onNext }) {
           {/* Improve block */}
           {fb.improve && (
             <div style={{ marginBottom: 20 }}>
-              <p style={{ color: T.yellow, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>不足之处</p>
-              {fb.improve.split(/[；;]|\d+[)）]\s*/).filter(s => s.trim()).map((s, i) => (
+              <p style={{ color: T.subtle, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>不足之处</p>
+              {fb.improve.split(/[；;]|\d+[)）.．]\s*/).filter(s => s.trim()).map((s, i) => (
                 <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8 }}>
-                  <span style={{ color: T.yellow, fontSize: 12, flexShrink: 0, marginTop: 3 }}>{"△"}</span>
+                  <span style={{ color: T.yellow, fontSize: 13, fontWeight: 500, flexShrink: 0, minWidth: 16 }}>{i + 1}</span>
                   <p style={{ color: T.text, fontSize: 14, lineHeight: 1.8, margin: 0 }}>{s.trim()}</p>
                 </div>
               ))}
