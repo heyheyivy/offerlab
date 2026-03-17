@@ -578,8 +578,8 @@ function PhaseMock({ session, update, onNext }) {
 候选人回答：${answers[idx]}
 
 评估要求：
-- strengths：指出回答中具体做得好的地方（引用原话中的亮点）
-- improve：指出最关键的一个不足（直接说缺了什么或哪里表达有问题）
+- strengths：列出2-3个具体优点，用分号分隔，每点引用原话亮点说明为什么好
+- improve：列出1-2个最关键的不足，用分号分隔，具体说缺了什么或哪里表达有问题
 - suggestion：给出3-4句具体的改进建议，包括：1)结构上如何优化 2)应该补充哪些具体内容/数据 3)可以直接用的一句改写示例
 
 返回JSON：{"score":0-10的数字,"dimensions":{"逻辑清晰":0-10,"内容深度":0-10,"表达效果":0-10,"岗位匹配":0-10},"strengths":"具体优点（引用原话亮点）","improve":"最关键的不足（具体说缺什么）","suggestions":["结构建议：具体说明","内容建议：应补充什么数据或细节","改写示例：一句可以直接用的示范回答开头"]}`, 1200
@@ -708,7 +708,7 @@ function PhaseMock({ session, update, onNext }) {
           />
 
           <div style={{ display: "flex", gap: 16, marginTop: 16, alignItems: "center" }}>
-            <Btn onClick={() => evalAnswer(activeQ)} disabled={evalLoading || !(answers[activeQ] && answers[activeQ].trim()) || rounds[activeQ]>=3}>
+            <Btn onClick={() => evalAnswer(activeQ)} disabled={evalLoading || !(answers[activeQ] && answers[activeQ].trim()) || rounds[activeQ]>=3} style={{ minWidth: 110 }}>
               {evalLoading ? <><Spinner/> 评分中...</> : rounds[activeQ]>=3 ? "已练习 3 次" : rounds[activeQ]>0 ? "再次评分 (" + rounds[activeQ] + "/3)" : "提交回答"}
             </Btn>
             {activeQ < questions.length-1 && (
@@ -719,13 +719,36 @@ function PhaseMock({ session, update, onNext }) {
       </div>
       {fb && (
         <div style={{ marginBottom: 28, paddingTop: 32, borderTop: "1px solid " + T.border }}>
-          {/* Score line */}
-          <div style={{ display: "flex", gap: 16, alignItems: "baseline", marginBottom: 8 }}>
+          {/* Score */}
+          <div style={{ display: "flex", gap: 16, alignItems: "baseline", marginBottom: 24 }}>
             <span style={{ color: scoreCol, fontSize: 48, fontWeight: 300, fontFamily: T.head, lineHeight: 1, letterSpacing: "-0.02em" }}>{fb.score}</span>
             <span style={{ color: T.subtle, fontSize: 13 }}>/ 10</span>
-            <span style={{ color: T.muted, fontSize: 14, marginLeft: 4 }}>{fb.strengths}</span>
           </div>
-          {fb.improve && <p style={{ color: T.yellow, fontSize: 14, lineHeight: 1.75, marginBottom: 24, marginTop: 8 }}>{fb.improve}</p>}
+          {/* Strengths block */}
+          {fb.strengths && (
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ color: T.green, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>优点</p>
+              {fb.strengths.split(/[；;]|\d+[)）]\s*/).filter(s => s.trim()).map((s, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8 }}>
+                  <span style={{ color: T.green, fontSize: 12, flexShrink: 0, marginTop: 3 }}>{"+"}</span>
+                  <p style={{ color: T.text, fontSize: 14, lineHeight: 1.8, margin: 0 }}>{s.trim()}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Improve block */}
+          {fb.improve && (
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ color: T.yellow, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>不足之处</p>
+              {fb.improve.split(/[；;]|\d+[)）]\s*/).filter(s => s.trim()).map((s, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, marginBottom: 8 }}>
+                  <span style={{ color: T.yellow, fontSize: 12, flexShrink: 0, marginTop: 3 }}>{"△"}</span>
+                  <p style={{ color: T.text, fontSize: 14, lineHeight: 1.8, margin: 0 }}>{s.trim()}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Dimensions */}
           {fb.dimensions && (
             <div style={{ marginBottom: 24 }}>
               {Object.entries(fb.dimensions).map(([k,v]) => (
@@ -736,23 +759,24 @@ function PhaseMock({ session, update, onNext }) {
               ))}
             </div>
           )}
+          {/* Suggestions */}
           {(fb.suggestion || fb.suggestions) && (
             <div style={{ marginBottom: 20 }}>
-              <p style={{ color: T.subtle, fontSize: 11, letterSpacing: "0.08em", marginBottom: 12 }}>改进建议</p>
+              <p style={{ color: T.accent, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>改进建议</p>
               {Array.isArray(fb.suggestions) ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {fb.suggestions.map((s, i) => (
-                    <div key={i} style={{ display: "flex", gap: 12 }}>
-                      <span style={{ color: T.accent, fontSize: 13, fontWeight: 500, flexShrink: 0, minWidth: 16 }}>{i + 1}</span>
+                    <div key={i} style={{ display: "flex", gap: 10 }}>
+                      <span style={{ color: T.accent, fontSize: 12, fontWeight: 500, flexShrink: 0, minWidth: 16, marginTop: 3 }}>{i + 1}</span>
                       <p style={{ color: T.text, fontSize: 14, lineHeight: 1.8, margin: 0 }}>{s}</p>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {(fb.suggestion || "").split(/\d+[\)）]\s*/).filter(Boolean).map((s, i) => (
-                    <div key={i} style={{ display: "flex", gap: 12 }}>
-                      <span style={{ color: T.accent, fontSize: 13, fontWeight: 500, flexShrink: 0, minWidth: 16 }}>{i + 1}</span>
+                    <div key={i} style={{ display: "flex", gap: 10 }}>
+                      <span style={{ color: T.accent, fontSize: 12, fontWeight: 500, flexShrink: 0, minWidth: 16, marginTop: 3 }}>{i + 1}</span>
                       <p style={{ color: T.text, fontSize: 14, lineHeight: 1.8, margin: 0 }}>{s.trim()}</p>
                     </div>
                   ))}
@@ -2268,10 +2292,10 @@ function AppTracker({ sessions, onStartPrep }) {
           <div key={a.id} style={{ borderTop: "1px solid " + T.border, animation: "fadeUp .3s ease both", animationDelay: (i * 0.04) + "s" }}>
             <div style={{ padding: "20px 0", display: "flex", gap: 16, alignItems: "center" }}>
               <div onClick={() => setExpandedId(isExpanded ? null : a.id)} style={{ flex: 1, minWidth: 0, cursor: "pointer" }}>
-                <div style={{ display: "flex", gap: 10, alignItems: "baseline", marginBottom: 4 }}>
-                  <p style={{ color: T.text, fontWeight: 500, fontSize: 16, letterSpacing: "-0.01em" }}>{a.role}</p>
-                  <span style={{ color: T.muted, fontSize: 14 }}>{a.company}</span>
-                  {a.platform && <span style={{ color: T.subtle, fontSize: 12 }}>{a.platform}</span>}
+                <div style={{ display: "flex", gap: 10, alignItems: "baseline", marginBottom: 4, flexWrap: "nowrap", overflow: "hidden" }}>
+                  <p style={{ color: T.text, fontWeight: 500, fontSize: 16, letterSpacing: "-0.01em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{a.role}</p>
+                  {a.company && <span style={{ color: T.muted, fontSize: 14, whiteSpace: "nowrap", flexShrink: 0 }}>{a.company}</span>}
+                  {a.platform && <span style={{ color: T.subtle, fontSize: 12, whiteSpace: "nowrap", flexShrink: 0 }}>{a.platform}</span>}
                 </div>
                 <div style={{ display: "flex", gap: 12 }}>
                   <span style={{ color: T.subtle, fontSize: 13 }}>{a.appliedAt}</span>
