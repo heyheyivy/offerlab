@@ -528,11 +528,11 @@ function PhaseMock({ session, update, onNext }) {
     }, 1800);
 
     const roundGuide = {
-      "一面": "重点考察基础技能、自我介绍和岗位匹配度",
-      "二面": "深度技术追问、项目经验和案例分析",
-      "三面": "战略思维、领导力和高管层面考察",
-      "HR面": "薪资期望、入职时间、职业规划和文化契合",
-    }[round] || "综合考察候选人能力";
+      "一面": "基础行为题为主（自我介绍、为什么选择本公司/岗位、基础技能匹配），题目简单直接，难度低，不要出深度案例分析题",
+      "二面": "深度追问为主（具体项目案例、数据成果、失败复盘），难度中高，需要结合简历经历出题",
+      "三面": "战略与价值观（职业规划、商业判断、团队管理），难度高，考察全局思维",
+      "HR面": "只出HR类问题（薪资期望、入职时间、职业规划、文化契合、稳定性），难度低，不出业务题",
+    }[round] || "综合考察，行为题与技能题各半，难度适中";
 
     const jdText = session.jdSummary || (session.jd||"").slice(0,400);
     const resumeText = session.resumeSummary || (session.resume||"").slice(0,400);
@@ -544,7 +544,7 @@ function PhaseMock({ session, update, onNext }) {
     const researchHints = session.research?.summary?.questions?.length
       ? "\n网上面经中常见考察点（参考这些出题，不要照抄）：\n" + session.research.summary.questions.slice(0,5).map((q,i) => `${i+1}. ${q}`).join("\n")
       : "";
-    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${resumeText}${researchHints}\n\n请生成5道有针对性的面试题，覆盖不同考察维度。${langRule}\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"3-5句参考答案要点","tips":"回答思路提示"}]}\n共5题，难度适中，针对${round || "本轮"}面试。`;
+    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${resumeText}${researchHints}\n\n请生成5道有针对性的面试题，覆盖不同考察维度。${langRule}\n\nreference字段要求（重要）：\n- 写一段完整的示范回答，150-250字，用第一人称\n- 行为题用STAR结构：先说情境和任务，再说具体行动，最后说量化结果\n- 技术/综合题：先说核心观点，再用1-2个具体例子支撑，最后总结\n- 语气自然，像真人在面试中说话，不要列要点\n\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"完整示范回答150-250字","tips":"一句话回答思路"}]}\n共5题，严格按照面试重点控制难度。`;
 
     try {
       const system = "你是专业面试官，只输出合法JSON，不含任何markdown，不含代码块，直接输出{开头的JSON，用中文。";
