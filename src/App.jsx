@@ -2184,12 +2184,17 @@ function AppTracker({ sessions, onStartPrep }) {
         )}
 
         {addingResume && (
-          <div style={{ padding: "12px 14px", background: T.surface, borderRadius: 8, border: "1px solid " + T.border }}>
+          <div style={{ padding: "16px 18px", background: T.surface, borderRadius: 10, border: "1px solid " + T.border }}>
             <Inp value={resumeNameDraft} onChange={setResumeNameDraft} placeholder="简历名称（如：中文版、英文版、产品岗）"/>
-            <div style={{ marginTop: 10, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
-              <label style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: fileUploading ? "default" : "pointer", padding: "5px 10px", border: "1px dashed " + T.borderBright, borderRadius: 6, color: fileUploading ? T.subtle : T.muted, fontSize: 12, fontFamily: T.body, opacity: fileUploading ? 0.6 : 1 }}>
-                {fileUploading ? <Spinner/> : <span>↑</span>}
-                {fileUploading ? "解析中..." : "上传 Word / PDF"}
+            <div style={{ marginTop: 16, marginBottom: 12 }}>
+              <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: fileUploading ? "default" : "pointer", padding: "14px", border: "1.5px dashed " + (fileUploading ? T.dim : T.accent + "66"), borderRadius: 8, background: fileUploading ? T.bg : T.accentDim, transition: "all .15s" }}
+                onMouseEnter={e => { if (!fileUploading) { e.currentTarget.style.borderColor = T.accent; e.currentTarget.style.background = T.accentDim; }}}
+                onMouseLeave={e => { if (!fileUploading) { e.currentTarget.style.borderColor = T.accent + "66"; }}}>
+                {fileUploading ? <Spinner/> : <span style={{ fontSize: 16, color: T.accent }}>↑</span>}
+                <div>
+                  <p style={{ color: fileUploading ? T.subtle : T.accent, fontSize: 13, fontWeight: 500, margin: 0, fontFamily: T.body }}>{fileUploading ? "解析中..." : "上传简历文件"}</p>
+                  {!fileUploading && <p style={{ color: T.subtle, fontSize: 11, margin: 0, fontFamily: T.body }}>支持 PDF、Word (.docx)</p>}
+                </div>
                 <input type="file" accept=".pdf,.docx" style={{ display: "none" }} disabled={fileUploading} onChange={(e) => {
                   const file = e.target.files[0];
                   if (!file) return;
@@ -2269,11 +2274,19 @@ function AppTracker({ sessions, onStartPrep }) {
                   }
                 }}/>
               </label>
-              {fileError && <span style={{ color: T.red, fontSize: 12 }}>{fileError}</span>}
-              <span style={{ color: T.subtle, fontSize: 11 }}>PDF 如乱码请改用 .docx，或直接粘贴↓</span>
+              {fileError && <p style={{ color: T.red, fontSize: 12, margin: "6px 0 0", fontFamily: T.body }}>{fileError}</p>}
+              {resumeDraft && !fileUploading && (
+                <div style={{ marginTop: 8, padding: "8px 12px", background: T.greenDim, borderRadius: 6, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ color: T.green, fontSize: 13 }}>✓</span>
+                  <span style={{ color: T.green, fontSize: 12, fontFamily: T.body }}>已识别 {resumeDraft.length} 字，可在下方确认或修改</span>
+                </div>
+              )}
             </div>
-            <TA value={resumeDraft} onChange={setResumeDraft} placeholder="粘贴简历文字内容..." rows={6}/>
-            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <div style={{ marginBottom: 6 }}>
+              <p style={{ color: T.subtle, fontSize: 11, marginBottom: 4, fontFamily: T.body }}>或直接粘贴文字内容</p>
+              <TA value={resumeDraft} onChange={setResumeDraft} placeholder="粘贴简历文字内容..." rows={resumeDraft ? 6 : 3}/>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
               <Btn size="sm" onClick={() => {
                 if (!resumeDraft.trim()) return;
                 const newR = { id: "r_" + Date.now(), name: resumeNameDraft || "简历 " + (resumes.length + 1), text: resumeDraft };
