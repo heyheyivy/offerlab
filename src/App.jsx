@@ -188,10 +188,11 @@ function Spinner() {
   return <div style={{ width: 16, height: 16, border: "2px solid " + T.dim, borderTop: "2px solid " + T.accent, borderRadius: "50%", animation: "spin .7s linear infinite", flexShrink: 0 }}/>;
 }
 
-function TA({ value, onChange, placeholder, rows = 5 }) {
+function TA({ value, onChange, placeholder, rows = 5, variant = "default" }) {
   const [foc, setFoc] = useState(false);
+  const isCard = variant === "card";
   return <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows} onFocus={() => setFoc(true)} onBlur={() => setFoc(false)}
-    style={{ width: "100%", background: foc ? T.surface : T.bg, border: "none", borderBottom: "1px solid " + (foc ? T.accent : T.border), borderRadius: 0, padding: "14px 0px", color: T.text, fontSize: 15, fontFamily: T.body, resize: "vertical", outline: "none", lineHeight: 1.85, boxSizing: "border-box", fontWeight: 400, transition: "all .18s" }}/>;
+    style={{ width: "100%", background: T.surface, border: isCard ? "1px solid " + (foc ? T.accent : T.border) : "none", borderBottom: isCard ? "1px solid " + (foc ? T.accent : T.border) : "1px solid " + (foc ? T.accent : T.border), borderRadius: isCard ? 8 : 0, padding: isCard ? "14px 16px" : "14px 0px", color: T.text, fontSize: 15, fontFamily: T.body, resize: "vertical", outline: "none", lineHeight: 1.85, boxSizing: "border-box", fontWeight: 400, transition: "all .18s" }}/>;
 }
 
 function Inp({ value, onChange, placeholder }) {
@@ -1180,7 +1181,8 @@ ${compressed.slice(0, 2000)}
       {!result && (
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           <div>
-            <TA value={transcript} onChange={setTranscript} rows={12} placeholder={"面试官：请做一个自我介绍\n我：\n\n面试官：你为什么选择我们公司？\n我："}/>
+            <p style={{ color: T.subtle, fontSize: 12, marginBottom: 8 }}>粘贴面试内容</p>
+            <TA value={transcript} onChange={setTranscript} rows={12} variant="card" placeholder={"面试官：请做一个自我介绍\n我：\n\n面试官：你为什么选择我们公司？\n我："}/>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
               <p style={{ color: T.subtle, fontSize: 11, margin: 0 }}>支持凭记忆整理、会议字幕、语音转文字 · 请确保内容符合当地法规及面试方要求</p>
               {transcript.length > 0 && <button onClick={() => setTranscript("")} style={{ background: "none", border: "none", color: T.subtle, fontSize: 12, cursor: "pointer", fontFamily: T.body, flexShrink: 0, marginLeft: 12 }}>清空</button>}
