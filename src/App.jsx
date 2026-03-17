@@ -624,15 +624,15 @@ function PhaseMock({ session, update, onNext }) {
             <Spinner/>
             <span style={{ color: T.muted, fontSize: 14 }}>AI 生成题目中...</span>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
             {THINK_STEPS.slice(0, -1).map((step, i) => {
               const currentIdx = THINK_STEPS.indexOf(thinkingText);
               const isDone = i < currentIdx;
               const isActive = i === currentIdx;
               return (
-                <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", opacity: isDone ? 0.3 : isActive ? 1 : 0.15, transition: "opacity 0.5s" }}>
-                  <span style={{ fontSize: 11, color: isDone ? T.green : T.accent }}>{isDone ? "✓" : "·"}</span>
-                  <span style={{ color: T.muted, fontSize: 13 }}>{step}</span>
+                <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", height: 28, flexShrink: 0, opacity: isDone ? 0.3 : isActive ? 1 : 0.15, transition: "opacity 0.4s ease" }}>
+                  <span style={{ fontSize: 11, color: isDone ? T.green : T.accent, width: 10, flexShrink: 0 }}>{isDone ? "✓" : "·"}</span>
+                  <span style={{ color: T.muted, fontSize: 13, whiteSpace: "nowrap" }}>{step}</span>
                 </div>
               );
             })}
