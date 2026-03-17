@@ -1356,7 +1356,6 @@ async function ocrImages(files) {
 
 //  Word download helper (browser-side) 
 function downloadAsWord(text, filename) {
-  // Build RTF — proper format Word actually respects
   const esc = (s) => s
     .replace(/\\/g, "\\\\")
     .replace(/\{/g, "\\{")
@@ -1369,56 +1368,60 @@ function downloadAsWord(text, filename) {
 
   const lines = text.split("\n").map(l => l.trim());
   let body = "";
-
-  // RTF paragraph styles:
-  // \sb = space before (twips), \sa = space after, \sl = line spacing
-  // \fs = font size in half-points (22 = 11pt, 20 = 10pt, 26 = 13pt, 32 = 16pt)
-  // \b = bold, \b0 = end bold
-
   let isFirst = true;
+  const DATE_RE = /\d{4}[./]\d{2}|\d{4}\s*[-\u2013]\s*(\d{4}|present|\u81f3\u4eca|now)/i;
+
   for (const line of lines) {
-    if (!line) {
-      body += "{\\pard\\sb0\\sa80\\sl240\\slmult1\\par}\n";
-      continue;
-    }
+    if (!line) { body += "{\\pard\\sb0\\sa60\\par}\n"; continue; }
 
     const isName = isFirst;
-    const isSection = !isFirst && (
-      /^(EDUCATION|EXPERIENCE|SKILLS|PROFESSIONAL|SUMMARY|WORK|PROJECTS|AWARDS|LANGUAGES|CERTIFICATIONS|教育|工作经历|实习|技能|项目|荣誉|证书|语言)/.test(line.toUpperCase()) ||
-      (line.length < 30 && line === line.toUpperCase() && /[A-Z\u4e00-\u9fa5]/.test(line))
-    );
-    const isBullet = /^[•·\-\*]/.test(line);
-    const isContactLine = isFirst === false && !isSection && !isBullet && line.includes("|") && line.length < 120;
+    const upperLine = line.toUpperCase();
+    const isSection =
+      !isFirst && line.length < 40 && !DATE_RE.test(line) && (
+        /^(EDUCATION|EXPERIENCE|SKILLS|PROFESSIONAL|SUMMARY|WORK|PROJECTS|AWARDS|LANGUAGES|AI|\u6559\u80b2|\u5de5\u4f5c\u7ecf\u5386|\u5b9e\u4e60\u7ecf\u5386|\u6280\u80fd|\u9879\u76ee|\u8363\u8a89|\u8bc1\u4e66|\u8bed\u8a00|\u7ec4\u7ec7|\u6d3b\u52a8)/.test(upperLine) ||
+        (line.length < 25 && /^[\u4e00-\u9fa5A-Z]/.test(line) && !/[|\u00b7\u2022\-]/.test(line))
+      );
+    const isBullet = /^[\u2022\u00b7\-\*]/.test(line);
+    const isContact = !isFirst && !isSection && !isBullet && line.includes("|") && line.length < 150 && !DATE_RE.test(line);
+    const hasDate = DATE_RE.test(line);
 
     if (isName) {
-      // Name: centered, 16pt bold
-      body += `{\\pard\\qc\\sb0\\sa60\\b\\fs32 ${esc(line)}\\b0\\par}\n`;
+      body += "{\\pard\\qc\\sb0\\sa80\\b\\fs28 " + esc(line) + "\\b0\\par}\n";
       isFirst = false;
-    } else if (isContactLine) {
-      // Contact info: centered, 9pt
-      body += `{\\pard\\qc\\sb0\\sa80\\fs18 ${esc(line)}\\par}\n`;
+    } else if (isContact) {
+      body += "{\\pard\\qc\\sb0\\sa60\\fs18 " + esc(line) + "\\par}\n";
     } else if (isSection) {
-      // Section header: 11pt bold, line below via bottom border
-      body += `{\\pard\\sb180\\sa60\\brdrb\\brdrs\\brdrw10\\brdrcf1\\b\\fs22 ${esc(line.toUpperCase())}\\b0\\par}\n`;
+      body += "{\\pard\\sb200\\sa60\\brdrb\\brdrs\\brdrw10\\brdrcf1\\b\\fs22 " + esc(line) + "\\b0\\par}\n";
     } else if (isBullet) {
-      // Bullet: 10pt, indented
-      const content = line.replace(/^[•·\-\*]\s*/, "");
-      body += `{\\pard\\li280\\fi-280\\sb0\\sa40\\fs20 \\bullet  ${esc(content)}\\par}\n`;
+      const cnt = line.replace(/^[\u2022\u00b7\-\*]\s*/, "");
+      body += "{\\pard\\li360\\fi-180\\sb0\\sa40\\fs20 \\bullet  " + esc(cnt) + "\\par}\n";
+    } else if (hasDate) {
+      const dateMatch = line.match(/(\d{4}[./\s\-\u2013].{3,20}?)\s*$/);
+      if (dateMatch) {
+        const dateStr = dateMatch[1].trim();
+        const mainStr = line.slice(0, line.lastIndexOf(dateStr)).replace(/[|\u00b7\s]+$/, "").trim();
+        if (mainStr) {
+          body += "{\\pard\\sb80\\sa20\\fs20\\tqr\\tx9360 \\b " + esc(mainStr) + "\\b0\\tab " + esc(dateStr) + "\\par}\n";
+        } else {
+          body += "{\\pard\\sb80\\sa20\\fs20 " + esc(line) + "\\par}\n";
+        }
+      } else {
+        body += "{\\pard\\sb80\\sa20\\b\\fs20 " + esc(line) + "\\b0\\par}\n";
+      }
     } else {
-      // Regular: 10pt
-      body += `{\\pard\\sb0\\sa40\\fs20 ${esc(line)}\\par}\n`;
+      body += "{\\pard\\sb0\\sa40\\fs20 " + esc(line) + "\\par}\n";
     }
   }
 
-  const rtf = `{\\rtf1\\ansi\\deff0
-{\\fonttbl{\\f0\\fswiss\\fcharset0 Arial;}{\\f1\\fswiss\\fcharset0 Calibri;}}
-{\\colortbl;\\red100\\green100\\blue100;}
-{\\*\\generator OfferLab;}
-\\paperw12240\\paperh15840
-\\margl1080\\margr1080\\margt1080\\margb1080
-\\widowctrl\\hyphauto
-\\f1\\fs20
-${body}}`;
+  const rtf = "{\\rtf1\\ansi\\ansicpg936\\deff0\n" +
+    "{\\fonttbl{\\f0\\fswiss\\fcharset134 Microsoft YaHei;}{\\f1\\fswiss\\fcharset0 Calibri;}}\n" +
+    "{\\colortbl;\\red80\\green80\\blue80;}\n" +
+    "{\\*\\generator OfferLab;}\n" +
+    "\\paperw12240\\paperh15840\n" +
+    "\\margl1080\\margr1080\\margt900\\margb900\n" +
+    "\\widowctrl\\hyphauto\n" +
+    "\\f0\\fs20\n" +
+    body + "}";
 
   const blob = new Blob([rtf], { type: "application/rtf" });
   const url = URL.createObjectURL(blob);
@@ -2267,7 +2270,7 @@ function AppTracker({ sessions, onStartPrep }) {
                 }}/>
               </label>
               {fileError && <span style={{ color: T.red, fontSize: 12 }}>{fileError}</span>}
-              <span style={{ color: T.subtle, fontSize: 11 }}>推荐 .docx，PDF 中文可能丢失 · 或直接粘贴↓</span>
+              <span style={{ color: T.subtle, fontSize: 11 }}>PDF 如乱码请改用 .docx，或直接粘贴↓</span>
             </div>
             <TA value={resumeDraft} onChange={setResumeDraft} placeholder="粘贴简历文字内容..." rows={6}/>
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
