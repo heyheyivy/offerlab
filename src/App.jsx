@@ -708,7 +708,7 @@ function PhaseMock({ session, update, onNext }) {
           />
 
           <div style={{ display: "flex", gap: 16, marginTop: 16, alignItems: "center" }}>
-            <Btn onClick={() => evalAnswer(activeQ)} disabled={evalLoading || !(answers[activeQ] && answers[activeQ].trim()) || rounds[activeQ]>=3} style={{ minWidth: 110 }}>
+            <Btn onClick={() => { if (!evalLoading) evalAnswer(activeQ); }} disabled={!(answers[activeQ] && answers[activeQ].trim()) || rounds[activeQ]>=3} style={{ minWidth: 110, opacity: evalLoading ? 0.75 : 1 }}>
               {evalLoading ? <><Spinner/> 评分中...</> : rounds[activeQ]>=3 ? "已练习 3 次" : rounds[activeQ]>0 ? "再次评分 (" + rounds[activeQ] + "/3)" : "提交回答"}
             </Btn>
             {activeQ < questions.length-1 && (
