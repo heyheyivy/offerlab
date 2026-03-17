@@ -1,19 +1,7 @@
+import pdfParse from "pdf-parse";
+import mammoth from "mammoth";
+
 export const maxDuration = 30;
-
-// Helper: extract text from PDF using pure JS (no native deps)
-async function extractPdfText(buffer) {
-  // Use pdf-parse via dynamic require — installed as dependency
-  const pdfParse = (await import("pdf-parse/lib/pdf-parse.js")).default;
-  const data = await pdfParse(buffer);
-  return data.text || "";
-}
-
-// Helper: extract text from docx using mammoth
-async function extractDocxText(buffer) {
-  const mammoth = (await import("mammoth")).default || (await import("mammoth"));
-  const result = await mammoth.extractRawText({ buffer });
-  return result.value || "";
-}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).end();
@@ -27,21 +15,22 @@ export default async function handler(req, res) {
     let rawText = "";
 
     if (lower.endsWith(".pdf")) {
-      rawText = await extractPdfText(buffer);
+      const data = await pdfParse(buffer);
+      rawText = data.text || "";
     } else if (lower.endsWith(".docx")) {
-      rawText = await extractDocxText(buffer);
+      const result = await mammoth.extractRawText({ buffer });
+      rawText = result.value || "";
     } else if (lower.endsWith(".doc")) {
-      // .doc is binary — just return error, ask user to save as .docx
       return res.status(400).json({ error: "请将 .doc 文件另存为 .docx 后上传" });
     } else {
-      return res.status(400).json({ error: "不支持的文件格式" });
+      return res.status(400).json({ error: "不支持的文件格式，请上传 PDF 或 Word(.docx)" });
     }
 
     if (!rawText || rawText.trim().length < 50) {
-      return res.status(400).json({ error: "文件内容无法读取，请粘贴文字" });
+      return res.status(400).json({ error: "文件内容无法读取，请直接粘贴文字" });
     }
 
-    // Use DeepSeek to clean up and structure the extracted text
+    // Use DeepSeek to clean up extracted text
     const aiRes = await fetch("https://api.deepseek.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -70,7 +59,6 @@ export default async function handler(req, res) {
     res.status(200).json({ text: cleaned.trim() });
   } catch (e) {
     console.error("parse-resume error:", e);
-    // Fallback: return raw extracted text if AI fails
-    res.status(200).json({ text: "", error: e.message });
+    res.status(500).json({ error: "解析失败，请直接粘贴文字" });
   }
 }
