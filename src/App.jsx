@@ -247,7 +247,13 @@ function toEnglishAlias(company) {
 function PhaseJobInfo({ session, update, onNext }) {
   const [summarizing, setSummarizing] = useState(false);
   const [researching, setResearching] = useState(false);
+  const [researchError, setResearchError] = useState(false);
   const [research, setResearch] = useState(session.research || null);
+
+  // Sync if session.research changes (e.g. navigating back to step 1)
+  useEffect(() => {
+    if (session.research) setResearch(session.research);
+  }, [session.id]);
 
   const handleNext = async () => {
     onNext();
@@ -272,7 +278,7 @@ function PhaseJobInfo({ session, update, onNext }) {
       const data = await r.json();
       setResearch(data);
       update({ research: data });
-    } catch(e) { console.error(e); }
+    } catch(e) { console.error(e); setResearchError(true); }
     finally { setResearching(false); }
   };
 
@@ -309,6 +315,7 @@ function PhaseJobInfo({ session, update, onNext }) {
               style={{ background: "none", border: "none", color: researching ? T.subtle : T.accent, fontSize: 13, cursor: researching ? "default" : "pointer", fontFamily: T.body, padding: 0, letterSpacing: "0.01em" }}>
               {researching ? "搜索中..." : "搜索面经"}
             </button>
+            {researchError && <span style={{ color: T.red, fontSize: 12, marginLeft: 10 }}>搜索失败，请重试</span>}
           </div>
         )}
         {research && (
@@ -2079,6 +2086,8 @@ function AppTracker({ sessions, onStartPrep }) {
   const [resumeDraft, setResumeDraft] = useState("");
   const [resumeNameDraft, setResumeNameDraft] = useState("");
   const [addingResume, setAddingResume] = useState(false);
+  const [fileUploading, setFileUploading] = useState(false);
+  const [fileError, setFileError] = useState("");
   const resumeImgRef = useRef();
 
   const saveResumes = (list) => {
@@ -2174,17 +2183,47 @@ function AppTracker({ sessions, onStartPrep }) {
         {addingResume && (
           <div style={{ padding: "12px 14px", background: T.surface, borderRadius: 8, border: "1px solid " + T.border }}>
             <Inp value={resumeNameDraft} onChange={setResumeNameDraft} placeholder="简历名称（如：中文版、英文版、产品岗）"/>
-            <div style={{ marginTop: 8 }}>
-              <TA value={resumeDraft} onChange={setResumeDraft} placeholder="粘贴简历文字内容..." rows={6}/>
+            <div style={{ marginTop: 10, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: fileUploading ? "default" : "pointer", padding: "5px 10px", border: "1px dashed " + T.borderBright, borderRadius: 6, color: fileUploading ? T.subtle : T.muted, fontSize: 12, fontFamily: T.body, opacity: fileUploading ? 0.6 : 1 }}>
+                {fileUploading ? <Spinner/> : <span>↑</span>}
+                {fileUploading ? "解析中..." : "上传 PDF / Word"}
+                <input type="file" accept=".pdf,.docx" style={{ display: "none" }} disabled={fileUploading} onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (!file) return;
+                  if (!resumeNameDraft) setResumeNameDraft(file.name.replace(/\.[^.]+$/, ""));
+                  setFileUploading(true);
+                  setFileError("");
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    const base64 = ev.target.result.split(",")[1];
+                    fetch("/api/parse-resume", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ fileData: base64, fileName: file.name }),
+                    })
+                      .then(r => r.json())
+                      .then(d => {
+                        if (d.text) { setResumeDraft(d.text); }
+                        else { setFileError(d.error || "解析失败，请直接粘贴文字"); }
+                      })
+                      .catch(() => setFileError("上传失败，请检查网络"))
+                      .finally(() => { setFileUploading(false); e.target.value = ""; });
+                  };
+                  reader.readAsDataURL(file);
+                }}/>
+              </label>
+              {fileError && <span style={{ color: T.red, fontSize: 12 }}>{fileError}</span>}
+              <span style={{ color: T.subtle, fontSize: 11 }}>或直接粘贴↓</span>
             </div>
+            <TA value={resumeDraft} onChange={setResumeDraft} placeholder="粘贴简历文字内容..." rows={6}/>
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
               <Btn size="sm" onClick={() => {
                 if (!resumeDraft.trim()) return;
                 const newR = { id: "r_" + Date.now(), name: resumeNameDraft || "简历 " + (resumes.length + 1), text: resumeDraft };
                 const updated = [...resumes, newR];
-                setResumes(updated); saveResumes(updated); setAddingResume(false); setResumeDraft(""); setResumeNameDraft("");
+                setResumes(updated); saveResumes(updated); setAddingResume(false); setResumeDraft(""); setResumeNameDraft(""); setFileError("");
               }} disabled={!resumeDraft.trim()}>保存</Btn>
-              <Btn variant="ghost" size="sm" onClick={() => setAddingResume(false)}>取消</Btn>
+              <Btn variant="ghost" size="sm" onClick={() => { setAddingResume(false); setFileError(""); }}>取消</Btn>
             </div>
           </div>
         )}
