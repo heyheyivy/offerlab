@@ -2186,7 +2186,7 @@ function AppTracker({ sessions, onStartPrep }) {
             <div style={{ marginTop: 10, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
               <label style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: fileUploading ? "default" : "pointer", padding: "5px 10px", border: "1px dashed " + T.borderBright, borderRadius: 6, color: fileUploading ? T.subtle : T.muted, fontSize: 12, fontFamily: T.body, opacity: fileUploading ? 0.6 : 1 }}>
                 {fileUploading ? <Spinner/> : <span>↑</span>}
-                {fileUploading ? "解析中..." : "上传 PDF / Word"}
+                {fileUploading ? "解析中..." : "上传 Word / PDF"}
                 <input type="file" accept=".pdf,.docx" style={{ display: "none" }} disabled={fileUploading} onChange={(e) => {
                   const file = e.target.files[0];
                   if (!file) return;
@@ -2200,68 +2200,31 @@ function AppTracker({ sessions, onStartPrep }) {
                     return;
                   }
                   const isPdf = file.name.toLowerCase().endsWith(".pdf");
-                  if (isPdf) {
-                    // PDF: load pdfjs from CDN, extract text in browser
-                    const PDFJS_CDN = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-                    const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-                    const loadScript = (src) => new Promise((resolve, reject) => {
-                      if (document.querySelector("script[data-pdfjs]")) { resolve(); return; }
-                      const s = document.createElement("script");
-                      s.src = src; s.setAttribute("data-pdfjs", "1");
-                      s.onload = resolve; s.onerror = reject;
-                      document.head.appendChild(s);
-                    });
-                    loadScript(PDFJS_CDN)
-                      .then(async () => {
-                        window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
-                        const ab = await file.arrayBuffer();
-                        const pdf = await window.pdfjsLib.getDocument({ data: new Uint8Array(ab) }).promise;
-                        let text = "";
-                        for (let i = 1; i <= pdf.numPages; i++) {
-                          const page = await pdf.getPage(i);
-                          const tc = await page.getTextContent();
-                          text += tc.items.map(function(it) { return it.str; }).join(" ") + " ";
-                        }
-                        return fetch("/api/parse-resume", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ rawText: text, fileName: file.name }),
-                        });
+                  // Send file to backend for parsing (both PDF and Word)
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    const base64 = ev.target.result.split(",")[1];
+                    fetch("/api/parse-resume", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ fileData: base64, fileName: file.name }),
+                    })
+                      .then(r => {
+                        if (!r.ok) return r.json().then(d => { throw new Error(d.error || "服务器错误 " + r.status); });
+                        return r.json();
                       })
-                      .then(function(r) { return r && r.json ? r.json() : null; })
-                      .then(function(d) {
-                        if (d && d.text) setResumeDraft(d.text);
-                        else if (d && d.error) setFileError(d.error);
+                      .then(d => {
+                        if (d.text) setResumeDraft(d.text);
+                        else setFileError(d.error || "解析失败，请直接粘贴文字");
                       })
-                      .catch(function(err) { setFileError("PDF 解析失败，请直接粘贴文字"); })
-                      .finally(function() { setFileUploading(false); e.target.value = ""; });
-                  } else {
-                    // Word: send to backend
-                    const reader = new FileReader();
-                    reader.onload = (ev) => {
-                      const base64 = ev.target.result.split(",")[1];
-                      fetch("/api/parse-resume", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ fileData: base64, fileName: file.name }),
-                      })
-                        .then(r => {
-                          if (!r.ok) return r.json().then(d => { throw new Error(d.error || "服务器错误 " + r.status); });
-                          return r.json();
-                        })
-                        .then(d => {
-                          if (d.text) setResumeDraft(d.text);
-                          else setFileError(d.error || "解析失败，请直接粘贴文字");
-                        })
-                        .catch(err => setFileError(err.message || "上传失败，请直接粘贴文字"))
-                        .finally(() => { setFileUploading(false); e.target.value = ""; });
-                    };
-                    reader.readAsDataURL(file);
-                  }
+                      .catch(err => setFileError(err.message || "上传失败，请直接粘贴文字"))
+                      .finally(() => { setFileUploading(false); e.target.value = ""; });
+                  };
+                  reader.readAsDataURL(file);
                 }}/>
               </label>
               {fileError && <span style={{ color: T.red, fontSize: 12 }}>{fileError}</span>}
-              <span style={{ color: T.subtle, fontSize: 11 }}>或直接粘贴↓</span>
+              <span style={{ color: T.subtle, fontSize: 11 }}>推荐 .docx，PDF 中文可能丢失 · 或直接粘贴↓</span>
             </div>
             <TA value={resumeDraft} onChange={setResumeDraft} placeholder="粘贴简历文字内容..." rows={6}/>
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
