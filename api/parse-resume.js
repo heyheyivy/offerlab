@@ -1,4 +1,5 @@
 import mammoth from "mammoth";
+import pdfParse from "pdf-parse/lib/pdf-parse.js";
 
 export const maxDuration = 30;
 
@@ -14,25 +15,8 @@ export default async function handler(req, res) {
     let text = "";
 
     if (lower.endsWith(".pdf")) {
-      // Use pdfjs-dist in Node — handles Chinese fonts better than browser canvas
-      const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-      pdfjs.GlobalWorkerOptions.workerSrc = "";
-
-      const loadingTask = pdfjs.getDocument({
-        data: new Uint8Array(buffer),
-        useSystemFonts: true,
-        disableFontFace: true,
-      });
-      const pdf = await loadingTask.promise;
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent({ includeMarkedContent: false });
-        const pageText = content.items
-          .map((item) => ("str" in item ? item.str : ""))
-          .join("");
-        text += pageText + "\n";
-      }
+      const data = await pdfParse(buffer);
+      text = data.text || "";
     } else if (lower.endsWith(".docx")) {
       const result = await mammoth.extractRawText({ buffer });
       text = result.value || "";
