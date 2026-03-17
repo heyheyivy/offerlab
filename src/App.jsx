@@ -2193,32 +2193,71 @@ function AppTracker({ sessions, onStartPrep }) {
                   if (!resumeNameDraft) setResumeNameDraft(file.name.replace(/\.[^.]+$/, ""));
                   setFileUploading(true);
                   setFileError("");
-                  if (file.size > 3 * 1024 * 1024) {
-                    setFileError("文件过大（最大 3MB），请压缩后重试或直接粘贴文字");
+                  if (file.size > 4 * 1024 * 1024) {
+                    setFileError("文件过大（最大 4MB），请直接粘贴文字");
                     setFileUploading(false);
                     e.target.value = "";
                     return;
                   }
-                  const reader = new FileReader();
-                  reader.onload = (ev) => {
-                    const base64 = ev.target.result.split(",")[1];
-                    fetch("/api/parse-resume", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ fileData: base64, fileName: file.name }),
-                    })
-                      .then(r => {
-                        if (!r.ok) return r.json().then(d => { throw new Error(d.error || "服务器错误 " + r.status); });
-                        return r.json();
+                  const isPdf = file.name.toLowerCase().endsWith(".pdf");
+                  if (isPdf) {
+                    // PDF: load pdfjs from CDN, extract text in browser
+                    const PDFJS_CDN = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+                    const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+                    const loadScript = (src) => new Promise((resolve, reject) => {
+                      if (document.querySelector("script[data-pdfjs]")) { resolve(); return; }
+                      const s = document.createElement("script");
+                      s.src = src; s.setAttribute("data-pdfjs", "1");
+                      s.onload = resolve; s.onerror = reject;
+                      document.head.appendChild(s);
+                    });
+                    loadScript(PDFJS_CDN)
+                      .then(async () => {
+                        window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+                        const ab = await file.arrayBuffer();
+                        const pdf = await window.pdfjsLib.getDocument({ data: new Uint8Array(ab) }).promise;
+                        let text = "";
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                          const page = await pdf.getPage(i);
+                          const tc = await page.getTextContent();
+                          text += tc.items.map(function(it) { return it.str; }).join(" ") + " ";
+                        }
+                        return fetch("/api/parse-resume", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ rawText: text, fileName: file.name }),
+                        });
                       })
-                      .then(d => {
-                        if (d.text) { setResumeDraft(d.text); }
-                        else { setFileError(d.error || "解析失败，请直接粘贴文字"); }
+                      .then(function(r) { return r && r.json ? r.json() : null; })
+                      .then(function(d) {
+                        if (d && d.text) setResumeDraft(d.text);
+                        else if (d && d.error) setFileError(d.error);
                       })
-                      .catch((err) => setFileError(err.message || "上传失败，请直接粘贴文字"))
-                      .finally(() => { setFileUploading(false); e.target.value = ""; });
-                  };
-                  reader.readAsDataURL(file);
+                      .catch(function(err) { setFileError("PDF 解析失败，请直接粘贴文字"); })
+                      .finally(function() { setFileUploading(false); e.target.value = ""; });
+                  } else {
+                    // Word: send to backend
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                      const base64 = ev.target.result.split(",")[1];
+                      fetch("/api/parse-resume", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ fileData: base64, fileName: file.name }),
+                      })
+                        .then(r => {
+                          if (!r.ok) return r.json().then(d => { throw new Error(d.error || "服务器错误 " + r.status); });
+                          return r.json();
+                        })
+                        .then(d => {
+                          if (d.text) setResumeDraft(d.text);
+                          else setFileError(d.error || "解析失败，请直接粘贴文字");
+                        })
+                        .catch(err => setFileError(err.message || "上传失败，请直接粘贴文字"))
+                        .finally(() => { setFileUploading(false); e.target.value = ""; });
+                    };
+                    reader.readAsDataURL(file);
+                  }
                 }}/>
               </label>
               {fileError && <span style={{ color: T.red, fontSize: 12 }}>{fileError}</span>}
