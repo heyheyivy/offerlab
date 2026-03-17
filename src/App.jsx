@@ -374,8 +374,49 @@ function PhaseJobInfo({ session, update, onNext }) {
         <TA value={session.jd} onChange={v => update({ jd: v })} placeholder="粘贴职位描述 JD..." rows={8}/>
       </div>
       <div>
-        <p style={{ color: T.subtle, fontSize: 12, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 16 }}>简历（可选）</p>
-        <TA value={session.resume} onChange={v => update({ resume: v })} placeholder="粘贴简历内容，AI 将生成更有针对性的题目..." rows={6}/>
+        <p style={{ color: T.subtle, fontSize: 12, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 12 }}>简历（可选）</p>
+        {(() => {
+          // Auto-read from resume library
+          let libResumes = [];
+          try { libResumes = JSON.parse(localStorage.getItem("resumes") || "[]"); } catch(e) {}
+          const hasLib = libResumes.length > 0;
+          const hasResume = session.resume && session.resume.trim().length > 0;
+          if (hasResume) {
+            const wordCount = session.resume.trim().length;
+            return (
+              <div style={{ padding: "12px 14px", background: T.greenDim, borderRadius: 8, border: "1px solid " + T.green + "44", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <p style={{ color: T.green, fontSize: 13, fontWeight: 500, margin: 0 }}>已读取简历 · {wordCount} 字</p>
+                  <p style={{ color: T.green, fontSize: 11, margin: "2px 0 0", opacity: 0.8 }}>AI 将根据此简历生成更有针对性的题目</p>
+                </div>
+                <button onClick={() => update({ resume: "" })} style={{ background: "none", border: "none", color: T.green, fontSize: 12, cursor: "pointer", fontFamily: T.body, opacity: 0.7 }}>移除</button>
+              </div>
+            );
+          }
+          if (hasLib) {
+            return (
+              <div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {libResumes.map(r => (
+                    <button key={r.id} onClick={() => update({ resume: r.text })}
+                      style={{ background: T.surface, border: "1px solid " + T.border, borderRadius: 8, padding: "10px 14px", cursor: "pointer", textAlign: "left", fontFamily: T.body, transition: "border-color .15s" }}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = T.accent}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = T.border}>
+                      <p style={{ color: T.text, fontSize: 13, fontWeight: 500, margin: 0 }}>{r.name}</p>
+                      <p style={{ color: T.subtle, fontSize: 11, margin: "2px 0 0" }}>{r.text.length} 字</p>
+                    </button>
+                  ))}
+                </div>
+                <p style={{ color: T.subtle, fontSize: 11, marginTop: 8 }}>选择简历后 AI 将生成更有针对性的题目</p>
+              </div>
+            );
+          }
+          return (
+            <div style={{ padding: "12px 14px", background: T.bg, borderRadius: 8, border: "1px dashed " + T.border }}>
+              <p style={{ color: T.subtle, fontSize: 13, margin: 0 }}>简历库为空，可先在「投递追踪」中添加简历</p>
+            </div>
+          );
+        })()}
       </div>
       <Btn onClick={handleNext} disabled={!session.company || !session.role} full size="lg">生成面试题 →</Btn>
     </div>
@@ -544,7 +585,7 @@ function PhaseMock({ session, update, onNext }) {
     const researchHints = session.research?.summary?.questions?.length
       ? "\n网上面经中常见考察点（参考这些出题，不要照抄）：\n" + session.research.summary.questions.slice(0,5).map((q,i) => `${i+1}. ${q}`).join("\n")
       : "";
-    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${resumeText}${researchHints}\n\n请生成8道有针对性的面试题，覆盖不同考察维度。${langRule}\n\nreference字段要求（重要）：\n- 写一段完整的示范回答，150-250字，用第一人称\n- 行为题用STAR结构：先说情境和任务，再说具体行动，最后说量化结果\n- 技术/综合题：先说核心观点，再用1-2个具体例子支撑，最后总结\n- 语气自然，像真人在面试中说话，不要列要点\n\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"完整示范回答150-250字","tips":"一句话回答思路"}]}\n共8题，严格按照面试重点控制难度，覆盖不同题型，不要重复同一类型超过3题。`;
+    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${resumeText}${researchHints}\n\n请生成7道有针对性的面试题，覆盖不同考察维度。${langRule}\n\nreference字段要求（重要）：\n- 写一段完整的示范回答，150-250字，用第一人称\n- 行为题用STAR结构：先说情境和任务，再说具体行动，最后说量化结果\n- 技术/综合题：先说核心观点，再用1-2个具体例子支撑，最后总结\n- 语气自然，像真人在面试中说话，不要列要点\n\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"完整示范回答150-250字","tips":"一句话回答思路"}]}\n共7题，严格按照面试重点控制难度，覆盖不同题型，不要重复同一类型超过2题。`;
 
     try {
       const system = "你是专业面试官，只输出合法JSON，不含任何markdown，不含代码块，直接输出{开头的JSON，用中文。";
@@ -619,7 +660,7 @@ function PhaseMock({ session, update, onNext }) {
   if (!questions.length) return (
     <div>
       <h2 style={{ color: T.text, fontSize: 28, fontWeight: 400, letterSpacing: "-0.03em", marginBottom: 12, fontFamily: T.head }}>AI 面试模拟</h2>
-      <p style={{ color: T.muted, fontSize: 15, lineHeight: 1.8, marginBottom: 48 }}>正在生成 8 道{session.interviewRound ? " " + session.interviewRound : ""}面试题...</p>
+      <p style={{ color: T.muted, fontSize: 15, lineHeight: 1.8, marginBottom: 48 }}>正在生成 7 道{session.interviewRound ? " " + session.interviewRound : ""}面试题...</p>
       {genError ? (
         <div>
           <div style={{ borderLeft: "1.5px solid " + T.red, paddingLeft: 14, marginBottom: 28, color: T.red, fontSize: 14 }}>{genError}</div>
