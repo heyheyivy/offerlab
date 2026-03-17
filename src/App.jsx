@@ -2193,6 +2193,12 @@ function AppTracker({ sessions, onStartPrep }) {
                   if (!resumeNameDraft) setResumeNameDraft(file.name.replace(/\.[^.]+$/, ""));
                   setFileUploading(true);
                   setFileError("");
+                  if (file.size > 3 * 1024 * 1024) {
+                    setFileError("文件过大（最大 3MB），请压缩后重试或直接粘贴文字");
+                    setFileUploading(false);
+                    e.target.value = "";
+                    return;
+                  }
                   const reader = new FileReader();
                   reader.onload = (ev) => {
                     const base64 = ev.target.result.split(",")[1];
@@ -2201,12 +2207,15 @@ function AppTracker({ sessions, onStartPrep }) {
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ fileData: base64, fileName: file.name }),
                     })
-                      .then(r => r.json())
+                      .then(r => {
+                        if (!r.ok) return r.json().then(d => { throw new Error(d.error || "服务器错误 " + r.status); });
+                        return r.json();
+                      })
                       .then(d => {
                         if (d.text) { setResumeDraft(d.text); }
                         else { setFileError(d.error || "解析失败，请直接粘贴文字"); }
                       })
-                      .catch(() => setFileError("上传失败，请检查网络"))
+                      .catch((err) => setFileError(err.message || "上传失败，请直接粘贴文字"))
                       .finally(() => { setFileUploading(false); e.target.value = ""; });
                   };
                   reader.readAsDataURL(file);
