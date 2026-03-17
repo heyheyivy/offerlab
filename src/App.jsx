@@ -225,6 +225,25 @@ function StepDot({ n, active, done }) {
 }
 
 //  Phase 1: Job Info 
+// Company alias map CN->EN for better search coverage
+function toEnglishAlias(company) {
+  var map = {
+    "字节跳动": "ByteDance", "抖音": "TikTok", "快手": "Kuaishou",
+    "腾讯": "Tencent", "阿里巴巴": "Alibaba", "阿里": "Alibaba",
+    "百度": "Baidu", "京东": "JD.com", "美团": "Meituan",
+    "滴滴": "DiDi", "拼多多": "Pinduoduo", "网易": "NetEase",
+    "小红书": "RedNote", "哔哩哔哩": "bilibili",
+    "蚂蚁": "Ant Group", "华为": "Huawei", "小米": "Xiaomi",
+    "商汤": "SenseTime", "微软": "Microsoft",
+    "谷歌": "Google", "苹果": "Apple", "亚马逊": "Amazon",
+  };
+  var keys = Object.keys(map);
+  for (var k = 0; k < keys.length; k++) {
+    if (company.indexOf(keys[k]) !== -1) return map[keys[k]];
+  }
+  return "";
+}
+
 function PhaseJobInfo({ session, update, onNext }) {
   const [summarizing, setSummarizing] = useState(false);
   const [researching, setResearching] = useState(false);
@@ -248,7 +267,7 @@ function PhaseJobInfo({ session, update, onNext }) {
       const r = await fetch("/api/research", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ company: session.company, role: session.role }),
+        body: JSON.stringify({ company: session.company, role: session.role, companyEn: toEnglishAlias(session.company) }),
       });
       const data = await r.json();
       setResearch(data);
@@ -287,7 +306,7 @@ function PhaseJobInfo({ session, update, onNext }) {
         {session.company && session.role && (
           <div style={{ marginTop: 16 }}>
             <button onClick={handleResearch} disabled={researching}
-              style={{ background: researching ? T.dim : T.accent, border: "none", color: "#fff", fontSize: 13, fontWeight: 400, cursor: researching ? "default" : "pointer", fontFamily: T.body, padding: "5px 12px", borderRadius: 6, letterSpacing: "0.01em", transition: "background .15s", opacity: researching ? 0.6 : 1 }}>
+              style={{ background: "none", border: "none", color: researching ? T.subtle : T.accent, fontSize: 13, cursor: researching ? "default" : "pointer", fontFamily: T.body, padding: 0, letterSpacing: "0.01em" }}>
               {researching ? "搜索中..." : "搜索面经"}
             </button>
           </div>
@@ -312,26 +331,18 @@ function PhaseJobInfo({ session, update, onNext }) {
               </div>
             )}
             {research.results && research.results.length > 0 && (
-              <div style={{ padding: "16px", background: T.surface, borderRadius: 10, border: "1px solid " + T.border }}>
+              <div style={{ padding: "18px 20px", background: T.surface, borderRadius: 10, border: "1px solid " + T.border }}>
                 <p style={{ color: T.subtle, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 14 }}>相关面经</p>
-                {research.results.slice(0, 10).map((r, i, arr) => {
-                  const link = r.link || "";
-                  const isNiuke = link.includes("nowcoder.com");
-                  const domain = (r.source || link).replace(/^www\./, "").split("/")[0].split("?")[0];
-                  return (
-                    <div key={i} style={{ marginBottom: 14, paddingBottom: 14, borderBottom: i < arr.length - 1 ? "1px solid " + T.border : "none" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4, flexWrap: "wrap" }}>
-                        {isNiuke && <span style={{ fontSize: 10, color: T.green, background: T.greenDim, border: "1px solid #C0DDD0", borderRadius: 3, padding: "1px 5px", lineHeight: 1.6 }}>牛客</span>}
-                        <span style={{ color: T.subtle, fontSize: 11 }}>{domain}</span>
-                      </div>
-                      <a href={link} target="_blank" rel="noopener noreferrer"
-                        style={{ color: T.text, fontSize: 13, textDecoration: "none", fontWeight: 500, lineHeight: 1.6, display: "block", marginBottom: r.snippet ? 4 : 0, wordBreak: "break-word" }}>
-                        {r.title}
-                      </a>
-                      {r.snippet && <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.65, margin: 0, wordBreak: "break-word" }}>{r.snippet.slice(0, 100)}{r.snippet.length > 100 ? "..." : ""}</p>}
-                    </div>
-                  );
-                })}
+                {research.results.slice(0, 5).map((r, i) => (
+                  <div key={i} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: i < 4 ? "1px solid " + T.border : "none" }}>
+                    <a href={r.link} target="_blank" rel="noopener noreferrer"
+                      style={{ color: T.text, fontSize: 13, textDecoration: "none", fontWeight: 500, lineHeight: 1.5, display: "block", marginBottom: 3 }}>
+                      {r.title}
+                    </a>
+                    <p style={{ color: T.subtle, fontSize: 11, marginBottom: r.snippet ? 4 : 0 }}>{r.source}</p>
+                    {r.snippet && <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.6 }}>{r.snippet.slice(0, 120)}...</p>}
+                  </div>
+                ))}
               </div>
             )}
             <button onClick={handleResearch} disabled={researching}
@@ -526,7 +537,7 @@ function PhaseMock({ session, update, onNext }) {
     const researchHints = session.research?.summary?.questions?.length
       ? "\n网上面经中常见考察点（参考这些出题，不要照抄）：\n" + session.research.summary.questions.slice(0,5).map((q,i) => `${i+1}. ${q}`).join("\n")
       : "";
-    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${resumeText}${researchHints}\n\n请生成5道有针对性的面试题，覆盖不同考察维度。${langRule}\n\nreference字段要求（重要）：\n- 给出完整的参考回答，不少于5句\n- 必须包含1-2个具体案例或数据佐证，格式如"例如：[具体情景/数字/结果]"\n- 行为题用STAR结构（情境→任务→行动→结果），结果要量化\n- 技术题给出核心要点后附实际应用场景举例\n- 语言自然，像真人在面试中说话，而不是列要点\n\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"完整参考回答，含案例","tips":"回答思路提示"}]}\n共5题，难度适中，针对${round || "本轮"}面试。`;
+    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${resumeText}${researchHints}\n\n请生成5道有针对性的面试题，覆盖不同考察维度。${langRule}\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"3-5句参考答案要点","tips":"回答思路提示"}]}\n共5题，难度适中，针对${round || "本轮"}面试。`;
 
     try {
       const system = "你是专业面试官，只输出合法JSON，不含任何markdown，不含代码块，直接输出{开头的JSON，用中文。";
@@ -2187,7 +2198,7 @@ function AppTracker({ sessions, onStartPrep }) {
               <div>
                 <Label>平台</Label>
                 <select value={draft.platform} onChange={e => setDraft(p => ({ ...p, platform: e.target.value }))} style={{ width: "100%", background: "transparent", border: "none", borderBottom: "1px solid " + T.border, padding: "8px 0", color: T.text, fontSize: 15, fontFamily: T.body, outline: "none" }}>
-                  {["BOSS直聘", "LinkedIn", "智联招聘", "前程无忧", "拉勾网", "猎聘", "其他"].map(p => <option key={p}>{p}</option>)}
+                  {["BOSS直聘", "LinkedIn", "官网", "智联招聘", "前程无忧", "拉勾网", "猎聘", "其他"].map(p => <option key={p}>{p}</option>)}
                 </select>
               </div>
               <div><Label>投递日期</Label><Inp value={draft.appliedAt} onChange={v => setDraft(p => ({ ...p, appliedAt: v }))} placeholder="2025-03-01"/></div>
@@ -2230,27 +2241,21 @@ function AppTracker({ sessions, onStartPrep }) {
 
       {apps.length === 0 && !adding && (
         <div style={{ padding: "48px 0", animation: "fadeUp .5s ease both" }}>
-          {/* Hero */}
-          <p style={{ fontSize: 26, color: T.text, marginBottom: 10, letterSpacing: "-0.03em", fontFamily: T.head, fontWeight: 400 }}>AI 求职全流程助手</p>
-          <p style={{ fontSize: 15, color: T.muted, lineHeight: 1.85, marginBottom: 40, maxWidth: 420 }}>从投递到拿 Offer，帮你生成招呼语、优化简历、模拟面试、复盘真实表现。</p>
-
-          {/* Steps */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 0, marginBottom: 40 }}>
+          <p style={{ fontSize: 24, color: T.text, marginBottom: 8, letterSpacing: "-0.03em", fontFamily: T.head, fontWeight: 400 }}>从投递到拿 Offer</p>
+          <p style={{ fontSize: 14, color: T.muted, lineHeight: 1.8, marginBottom: 36 }}>三步走完整求职流程，AI 全程辅助</p>
+          <div style={{ display: "flex", gap: 12, marginBottom: 40 }}>
             {[
-              { n: "01", title: "添加投递记录", desc: "记录你投递的公司和职位，粘贴 JD 后 AI 自动生成招呼语和简历优化建议" },
-              { n: "02", title: "AI 模拟面试", desc: "针对 JD 生成 5 道面试题，语音或文字作答，AI 实时评分并给出改进建议" },
-              { n: "03", title: "真实面试复盘", desc: "面试结束后粘贴转录或实时录音，AI 深度分析你的表现并给出行动建议" },
+              { n: "01", label: "投递", desc: "记录岗位，生成招呼语" },
+              { n: "02", label: "备考", desc: "模拟面试，AI 评分" },
+              { n: "03", label: "复盘", desc: "分析表现，改进建议" },
             ].map((s, i) => (
-              <div key={i} style={{ display: "flex", gap: 20, padding: "20px 0", borderBottom: "1px solid " + T.border }}>
-                <span style={{ color: T.accent, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", minWidth: 24, marginTop: 3 }}>{s.n}</span>
-                <div>
-                  <p style={{ color: T.text, fontSize: 15, fontWeight: 500, marginBottom: 4 }}>{s.title}</p>
-                  <p style={{ color: T.muted, fontSize: 13, lineHeight: 1.7 }}>{s.desc}</p>
-                </div>
+              <div key={i} style={{ flex: 1, padding: "14px 16px", borderLeft: "2px solid " + T.accent + "55" }}>
+                <p style={{ color: T.accent, fontSize: 10, fontWeight: 500, letterSpacing: "0.1em", marginBottom: 8 }}>{s.n}</p>
+                <p style={{ color: T.text, fontSize: 15, fontWeight: 500, marginBottom: 5 }}>{s.label}</p>
+                <p style={{ color: T.muted, fontSize: 12, lineHeight: 1.7 }}>{s.desc}</p>
               </div>
             ))}
           </div>
-
           <p style={{ fontSize: 13, color: T.subtle }}>点击上方「+ 添加新投递」开始</p>
         </div>
       )}
@@ -2413,7 +2418,7 @@ export default function App() {
       <div style={{ minHeight: "100vh", background: T.bg }}>
         <div style={{ padding: "22px 48px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, background: T.bg, borderBottom: "1px solid " + T.border }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <svg width="18" height="18" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
+            <svg width="18" height="18" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
               <rect width="32" height="32" rx="7" fill="#6B7D6D"/>
               <text x="16" y="17" fontFamily="Georgia, serif" fontSize="15" fontWeight="400" fill="white" textAnchor="middle" dominantBaseline="middle">O</text>
               <rect x="7" y="21.5" width="18" height="0.7" fill="white" opacity="0.35"/>
