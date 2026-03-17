@@ -188,11 +188,10 @@ function Spinner() {
   return <div style={{ width: 16, height: 16, border: "2px solid " + T.dim, borderTop: "2px solid " + T.accent, borderRadius: "50%", animation: "spin .7s linear infinite", flexShrink: 0 }}/>;
 }
 
-function TA({ value, onChange, placeholder, rows = 5, variant = "default" }) {
+function TA({ value, onChange, placeholder, rows = 5 }) {
   const [foc, setFoc] = useState(false);
-  const isCard = variant === "card";
   return <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows} onFocus={() => setFoc(true)} onBlur={() => setFoc(false)}
-    style={{ width: "100%", background: T.surface, border: isCard ? "1px solid " + (foc ? T.accent : T.border) : "none", borderBottom: isCard ? "1px solid " + (foc ? T.accent : T.border) : "1px solid " + (foc ? T.accent : T.border), borderRadius: isCard ? 8 : 0, padding: isCard ? "14px 16px" : "14px 0px", color: T.text, fontSize: 15, fontFamily: T.body, resize: "vertical", outline: "none", lineHeight: 1.85, boxSizing: "border-box", fontWeight: 400, transition: "all .18s" }}/>;
+    style={{ width: "100%", background: foc ? T.surface : T.bg, border: "none", borderBottom: "1px solid " + (foc ? T.accent : T.border), borderRadius: 0, padding: "14px 0px", color: T.text, fontSize: 15, fontFamily: T.body, resize: "vertical", outline: "none", lineHeight: 1.85, boxSizing: "border-box", fontWeight: 400, transition: "all .18s" }}/>;
 }
 
 function Inp({ value, onChange, placeholder }) {
@@ -295,7 +294,7 @@ function PhaseJobInfo({ session, update, onNext }) {
           {INTERVIEW_ROUNDS.map(r => {
             const active = (session.interviewRound||"") === r.label;
             return (
-              <button key={r.id} onClick={() => { const wasRound = session.interviewRound; if (wasRound && wasRound !== r.label) { update({ interviewRound: r.label, interviewFocus: r.focus, questions: [] }); } else { update({ interviewRound: r.label, interviewFocus: r.focus }); } }}
+              <button key={r.id} onClick={() => update({ interviewRound: r.label, interviewFocus: r.focus })}
                 style={{ background: active ? T.accent : T.surface, border: "1.5px solid " + (active ? T.accent : T.border), borderRadius: 8, padding: "14px 16px", cursor: "pointer", textAlign: "left", transition: "all .15s" }}>
                 <p style={{ color: active ? "#fff" : T.text, fontSize: 15, fontWeight: 500, marginBottom: 4 }}>{r.label}</p>
                 <p style={{ color: active ? "rgba(255,255,255,0.7)" : T.subtle, fontSize: 12 }}>{r.desc}</p>
@@ -375,49 +374,8 @@ function PhaseJobInfo({ session, update, onNext }) {
         <TA value={session.jd} onChange={v => update({ jd: v })} placeholder="粘贴职位描述 JD..." rows={8}/>
       </div>
       <div>
-        <p style={{ color: T.subtle, fontSize: 12, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 12 }}>简历（可选）</p>
-        {(() => {
-          // Auto-read from resume library
-          let libResumes = [];
-          try { libResumes = JSON.parse(localStorage.getItem("resumes") || "[]"); } catch(e) {}
-          const hasLib = libResumes.length > 0;
-          const hasResume = session.resume && session.resume.trim().length > 0;
-          if (hasResume) {
-            const wordCount = session.resume.trim().length;
-            return (
-              <div style={{ padding: "12px 14px", background: T.greenDim, borderRadius: 8, border: "1px solid " + T.green + "44", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <p style={{ color: T.green, fontSize: 13, fontWeight: 500, margin: 0 }}>已读取简历 · {wordCount} 字</p>
-                  <p style={{ color: T.green, fontSize: 11, margin: "2px 0 0", opacity: 0.8 }}>AI 将根据此简历生成更有针对性的题目</p>
-                </div>
-                <button onClick={() => update({ resume: "" })} style={{ background: "none", border: "none", color: T.green, fontSize: 12, cursor: "pointer", fontFamily: T.body, opacity: 0.7 }}>移除</button>
-              </div>
-            );
-          }
-          if (hasLib) {
-            return (
-              <div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {libResumes.map(r => (
-                    <button key={r.id} onClick={() => update({ resume: r.text })}
-                      style={{ background: T.surface, border: "1px solid " + T.border, borderRadius: 8, padding: "10px 14px", cursor: "pointer", textAlign: "left", fontFamily: T.body, transition: "border-color .15s" }}
-                      onMouseEnter={e => e.currentTarget.style.borderColor = T.accent}
-                      onMouseLeave={e => e.currentTarget.style.borderColor = T.border}>
-                      <p style={{ color: T.text, fontSize: 13, fontWeight: 500, margin: 0 }}>{r.name}</p>
-                      <p style={{ color: T.subtle, fontSize: 11, margin: "2px 0 0" }}>{r.text.length} 字</p>
-                    </button>
-                  ))}
-                </div>
-                <p style={{ color: T.subtle, fontSize: 11, marginTop: 8 }}>选择简历后 AI 将生成更有针对性的题目</p>
-              </div>
-            );
-          }
-          return (
-            <div style={{ padding: "12px 14px", background: T.bg, borderRadius: 8, border: "1px dashed " + T.border }}>
-              <p style={{ color: T.subtle, fontSize: 13, margin: 0 }}>简历库为空，可先在「投递追踪」中添加简历</p>
-            </div>
-          );
-        })()}
+        <p style={{ color: T.subtle, fontSize: 12, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 16 }}>简历（可选）</p>
+        <TA value={session.resume} onChange={v => update({ resume: v })} placeholder="粘贴简历内容，AI 将生成更有针对性的题目..." rows={6}/>
       </div>
       <Btn onClick={handleNext} disabled={!session.company || !session.role} full size="lg">生成面试题 →</Btn>
     </div>
@@ -461,21 +419,11 @@ function extractJSON(text) {
 }
 
 //  Phase 1: Mock Interview 
-const Q_TYPES = ["行为", "技术", "情景", "动机", "综合", "案例", "认知", "压力"];
+const Q_TYPES = ["行为", "技术", "情景", "动机", "综合"];
 
 function PhaseMock({ session, update, onNext }) {
   const [questions, setQuestions] = useState(session.questions || []);
   const [loading, setLoading] = useState(false);
-  // Reset questions when round changes (user went back and picked a different round)
-  const prevRoundRef = useRef(session.interviewRound);
-  useEffect(() => {
-    if (prevRoundRef.current !== session.interviewRound) {
-      prevRoundRef.current = session.interviewRound;
-      setQuestions([]);
-      setAnswers([]);
-      setFeedbacks([]);
-    }
-  }, [session.interviewRound]);
   const [loadingStep, setLoadingStep] = useState(0);
   const [genError, setGenError] = useState("");
   const [activeQ, setActiveQ] = useState(0);
@@ -580,11 +528,11 @@ function PhaseMock({ session, update, onNext }) {
     }, 1800);
 
     const roundGuide = {
-      "一面": "结合候选人简历经历和公司背景出题：1-2题自我介绍/动机类，3-4题基于简历具体经历的行为题（STAR），2题与JD匹配的基础能力题。难度中等，避免过于抽象的战略题",
-      "二面": "业务面深度考察：以情景题和案例分析为主，要求候选人展示业务判断力和数据思维。结合JD核心岗位职责出题，2-3题需要候选人给出具体方案或数字，难度较高",
-      "三面": "高管视角考察：职业规划、商业判断、跨团队协作、行业认知。题目开放性强，考察战略思维和价值观，难度高",
-      "HR面": "只出HR类问题（期望薪资、入职时间、离职原因、职业规划、团队适配），不出任何业务或技术题，难度低",
-    }[round] || "综合考察：结合简历经历出行为题，结合JD出能力题，行为题与业务题各半，难度适中";
+      "一面": "重点考察基础技能、自我介绍和岗位匹配度",
+      "二面": "深度技术追问、项目经验和案例分析",
+      "三面": "战略思维、领导力和高管层面考察",
+      "HR面": "薪资期望、入职时间、职业规划和文化契合",
+    }[round] || "综合考察候选人能力";
 
     const jdText = session.jdSummary || (session.jd||"").slice(0,400);
     const resumeText = session.resumeSummary || (session.resume||"").slice(0,400);
@@ -596,11 +544,11 @@ function PhaseMock({ session, update, onNext }) {
     const researchHints = session.research?.summary?.questions?.length
       ? "\n网上面经中常见考察点（参考这些出题，不要照抄）：\n" + session.research.summary.questions.slice(0,5).map((q,i) => `${i+1}. ${q}`).join("\n")
       : "";
-    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${resumeText}${researchHints}\n\n请生成7道有针对性的面试题，覆盖不同考察维度。${langRule}\n\nreference字段要求（重要）：\n- 写一段完整的示范回答，150-250字，用第一人称\n- 行为题用STAR结构：先说情境和任务，再说具体行动，最后说量化结果\n- 技术/综合题：先说核心观点，再用1-2个具体例子支撑，最后总结\n- 语气自然，像真人在面试中说话，不要列要点\n\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"完整示范回答150-250字","tips":"一句话回答思路"}]}\n共7题，严格按照面试重点控制难度，覆盖不同题型，不要重复同一类型超过2题。`;
+    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${resumeText}${researchHints}\n\n请生成5道有针对性的面试题，覆盖不同考察维度。${langRule}\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"3-5句参考答案要点","tips":"回答思路提示"}]}\n共5题，难度适中，针对${round || "本轮"}面试。`;
 
     try {
       const system = "你是专业面试官，只输出合法JSON，不含任何markdown，不含代码块，直接输出{开头的JSON，用中文。";
-      const raw = await callClaude(prompt, 3200, { system });
+      const raw = await callClaude(prompt, 2000, { system });
       const fullText = raw.startsWith("{") ? raw : '{"questions":[' + raw;
       const result = extractJSON(fullText);
       let qs;
@@ -671,7 +619,7 @@ function PhaseMock({ session, update, onNext }) {
   if (!questions.length) return (
     <div>
       <h2 style={{ color: T.text, fontSize: 28, fontWeight: 400, letterSpacing: "-0.03em", marginBottom: 12, fontFamily: T.head }}>AI 面试模拟</h2>
-      <p style={{ color: T.muted, fontSize: 15, lineHeight: 1.8, marginBottom: 48 }}>正在生成 7 道{session.interviewRound ? " " + session.interviewRound : ""}面试题...</p>
+      <p style={{ color: T.muted, fontSize: 15, lineHeight: 1.8, marginBottom: 48 }}>正在生成 5 道{session.interviewRound ? " " + session.interviewRound : ""}面试题...</p>
       {genError ? (
         <div>
           <div style={{ borderLeft: "1.5px solid " + T.red, paddingLeft: 14, marginBottom: 28, color: T.red, fontSize: 14 }}>{genError}</div>
@@ -1175,19 +1123,60 @@ ${compressed.slice(0, 2000)}
   return (
     <div>
       <div style={{ marginBottom: 44 }}>
-        <h2 style={{ color: T.text, fontSize: 28, fontWeight: 400, letterSpacing: "-0.03em", marginBottom: 10, fontFamily: T.head }}>面试复盘</h2>
+        <h2 style={{ color: T.text, fontSize: 28, fontWeight: 400, letterSpacing: "-0.03em", marginBottom: 10, fontFamily: T.head }}>真实面试复盘</h2>
         <p style={{ color: T.muted, fontSize: 14 }}>{session.company}{session.role ? " · " + session.role : ""}{round ? " · " + round : ""}</p>
       </div>
       {!result && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          <div>
-            <p style={{ color: T.subtle, fontSize: 12, marginBottom: 8 }}>粘贴面试内容</p>
-            <TA value={transcript} onChange={setTranscript} rows={12} variant="card" placeholder={"面试官：请做一个自我介绍\n我：\n\n面试官：你为什么选择我们公司？\n我："}/>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-              <p style={{ color: T.subtle, fontSize: 11, margin: 0 }}>支持凭记忆整理、会议字幕、语音转文字 · 请确保内容符合当地法规及面试方要求</p>
-              {transcript.length > 0 && <button onClick={() => setTranscript("")} style={{ background: "none", border: "none", color: T.subtle, fontSize: 12, cursor: "pointer", fontFamily: T.body, flexShrink: 0, marginLeft: 12 }}>清空</button>}
-            </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+
+          {/* Mode selector — only 2 modes */}
+          <div style={{ display: "flex", gap: 0, borderRadius: 8, border: "1px solid " + T.border, overflow: "hidden" }}>
+            {[
+              { id: "record", label: "实时录音转文字" },
+              { id: "paste",  label: "粘贴文字" },
+            ].map((m, idx) => (
+              <button key={m.id} onClick={() => setInputMode(m.id)} style={{ flex: 1, padding: "10px 0", border: "none", borderRight: idx === 0 ? "1px solid " + T.border : "none", background: inputMode === m.id ? T.accent : T.surface, color: inputMode === m.id ? "#fff" : T.muted, fontSize: 13, cursor: "pointer", fontFamily: T.body, transition: "all .15s" }}>
+                {m.label}
+              </button>
+            ))}
           </div>
+          <p style={{ color: T.subtle, fontSize: 12, marginTop: 8 }}>建议用录音软件录完后转文字粘贴，效果更准确</p>
+          {inputMode === "record" && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <p style={{ color: T.subtle, fontSize: 12, fontWeight: 500, letterSpacing: "0.06em" }}>实时识别 · Chrome / Edge</p>
+                <button
+                  onClick={recording ? stopRecording : startRecording}
+                  style={{ display: "flex", alignItems: "center", gap: 6, background: recording ? T.red+"11" : "none", border: "1px solid " + (recording ? T.red : T.border), borderRadius: 20, padding: "5px 14px", color: recording ? T.red : T.muted, fontSize: 12, cursor: "pointer", fontFamily: T.body, transition: "all .2s", boxShadow: recording ? "0 0 0 3px " + T.red + "18" : "none" }}>
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: recording ? T.red : T.subtle, display: "inline-block", flexShrink: 0, animation: recording ? "pulse 1s infinite" : "none" }}/>
+                  {recording ? "录音中" : "开始录音"}
+                </button>
+              </div>
+              {/* Interim preview */}
+              {recording && (
+                <div style={{ marginBottom: 8, padding: "10px 14px", borderRadius: 8, background: T.red+"08", border: "1px solid " + T.red+"33", minHeight: 36 }}>
+                  <p style={{ color: T.red, fontSize: 13, lineHeight: 1.6, margin: 0, fontStyle: interim ? "normal" : "italic" }}>
+                    {interim || "请说话..."}
+                  </p>
+                </div>
+              )}
+              <TA value={transcript} onChange={setTranscript} rows={8} placeholder="识别的文字会实时出现在这里，也可以手动编辑..."/>
+              {transcript.length > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                  <p style={{ color: T.subtle, fontSize: 12 }}>{transcript.length} 字</p>
+                  <button onClick={() => setTranscript("")} style={{ background: "none", border: "none", color: T.subtle, fontSize: 12, cursor: "pointer", fontFamily: T.body }}>清空</button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Paste mode */}
+          {inputMode === "paste" && (
+            <div>
+              <TA value={transcript} onChange={setTranscript} rows={10} placeholder="粘贴面试录音转录文字..."/>
+              {transcript.length > 0 && <p style={{ color: T.subtle, fontSize: 12, marginTop: 6 }}>{transcript.length} 字</p>}
+            </div>
+          )}
 
           {qs.length > 0 && (
             <div>
@@ -1367,6 +1356,7 @@ async function ocrImages(files) {
 
 //  Word download helper (browser-side) 
 function downloadAsWord(text, filename) {
+  // Build RTF — proper format Word actually respects
   const esc = (s) => s
     .replace(/\\/g, "\\\\")
     .replace(/\{/g, "\\{")
@@ -1379,60 +1369,56 @@ function downloadAsWord(text, filename) {
 
   const lines = text.split("\n").map(l => l.trim());
   let body = "";
-  let isFirst = true;
-  const DATE_RE = /\d{4}[./]\d{2}|\d{4}\s*[-\u2013]\s*(\d{4}|present|\u81f3\u4eca|now)/i;
 
+  // RTF paragraph styles:
+  // \sb = space before (twips), \sa = space after, \sl = line spacing
+  // \fs = font size in half-points (22 = 11pt, 20 = 10pt, 26 = 13pt, 32 = 16pt)
+  // \b = bold, \b0 = end bold
+
+  let isFirst = true;
   for (const line of lines) {
-    if (!line) { body += "{\\pard\\sb0\\sa15\\par}\n"; continue; }
+    if (!line) {
+      body += "{\\pard\\sb0\\sa80\\sl240\\slmult1\\par}\n";
+      continue;
+    }
 
     const isName = isFirst;
-    const upperLine = line.toUpperCase();
-    const isSection =
-      !isFirst && line.length < 40 && !DATE_RE.test(line) && (
-        /^(EDUCATION|EXPERIENCE|SKILLS|PROFESSIONAL|SUMMARY|WORK|PROJECTS|AWARDS|LANGUAGES|AI|\u6559\u80b2|\u5de5\u4f5c\u7ecf\u5386|\u5b9e\u4e60\u7ecf\u5386|\u6280\u80fd|\u9879\u76ee|\u8363\u8a89|\u8bc1\u4e66|\u8bed\u8a00|\u7ec4\u7ec7|\u6d3b\u52a8)/.test(upperLine) ||
-        (line.length < 25 && /^[\u4e00-\u9fa5A-Z]/.test(line) && !/[|\u00b7\u2022\-]/.test(line))
-      );
-    const isBullet = /^[\u2022\u00b7\-\*]/.test(line);
-    const isContact = !isFirst && !isSection && !isBullet && line.includes("|") && line.length < 150 && !DATE_RE.test(line);
-    const hasDate = DATE_RE.test(line);
+    const isSection = !isFirst && (
+      /^(EDUCATION|EXPERIENCE|SKILLS|PROFESSIONAL|SUMMARY|WORK|PROJECTS|AWARDS|LANGUAGES|CERTIFICATIONS|教育|工作经历|实习|技能|项目|荣誉|证书|语言)/.test(line.toUpperCase()) ||
+      (line.length < 30 && line === line.toUpperCase() && /[A-Z\u4e00-\u9fa5]/.test(line))
+    );
+    const isBullet = /^[•·\-\*]/.test(line);
+    const isContactLine = isFirst === false && !isSection && !isBullet && line.includes("|") && line.length < 120;
 
     if (isName) {
-      body += "{\\pard\\qc\\sb0\\sa30\\b\\fs24 " + esc(line) + "\\b0\\par}\n";
+      // Name: centered, 16pt bold
+      body += `{\\pard\\qc\\sb0\\sa60\\b\\fs32 ${esc(line)}\\b0\\par}\n`;
       isFirst = false;
-    } else if (isContact) {
-      body += "{\\pard\\qc\\sb0\\sa25\\fs17 " + esc(line) + "\\par}\n";
+    } else if (isContactLine) {
+      // Contact info: centered, 9pt
+      body += `{\\pard\\qc\\sb0\\sa80\\fs18 ${esc(line)}\\par}\n`;
     } else if (isSection) {
-      body += "{\\pard\\sb100\\sa25\\brdrb\\brdrs\\brdrw8\\brdrcf1\\b\\fs20 " + esc(line) + "\\b0\\par}\n";
+      // Section header: 11pt bold, line below via bottom border
+      body += `{\\pard\\sb180\\sa60\\brdrb\\brdrs\\brdrw10\\brdrcf1\\b\\fs22 ${esc(line.toUpperCase())}\\b0\\par}\n`;
     } else if (isBullet) {
-      const cnt = line.replace(/^[\u2022\u00b7\-\*]\s*/, "");
-      body += "{\\pard\\li280\\fi-140\\sb0\\sa15\\fs18 \\bullet  " + esc(cnt) + "\\par}\n";
-    } else if (hasDate) {
-      const dateMatch = line.match(/(\d{4}[./\s\-\u2013].{3,20}?)\s*$/);
-      if (dateMatch) {
-        const dateStr = dateMatch[1].trim();
-        const mainStr = line.slice(0, line.lastIndexOf(dateStr)).replace(/[|\u00b7\s]+$/, "").trim();
-        if (mainStr) {
-          body += "{\\pard\\sb40\\sa8\\fs18\\tqr\\tx10800 \\b " + esc(mainStr) + "\\b0\\tab " + esc(dateStr) + "\\par}\n";
-        } else {
-          body += "{\\pard\\sb40\\sa8\\fs18 " + esc(line) + "\\par}\n";
-        }
-      } else {
-        body += "{\\pard\\sb40\\sa8\\b\\fs18 " + esc(line) + "\\b0\\par}\n";
-      }
+      // Bullet: 10pt, indented
+      const content = line.replace(/^[•·\-\*]\s*/, "");
+      body += `{\\pard\\li280\\fi-280\\sb0\\sa40\\fs20 \\bullet  ${esc(content)}\\par}\n`;
     } else {
-      body += "{\\pard\\sb0\\sa15\\fs18 " + esc(line) + "\\par}\n";
+      // Regular: 10pt
+      body += `{\\pard\\sb0\\sa40\\fs20 ${esc(line)}\\par}\n`;
     }
   }
 
-  const rtf = "{\\rtf1\\ansi\\ansicpg936\\deff0\n" +
-    "{\\fonttbl{\\f0\\fswiss\\fcharset134 Microsoft YaHei;}{\\f1\\fswiss\\fcharset0 Calibri;}}\n" +
-    "{\\colortbl;\\red80\\green80\\blue80;}\n" +
-    "{\\*\\generator OfferLab;}\n" +
-    "\\paperw12240\\paperh15840\n" +
-    "\\margl720\\margr720\\margt600\\margb600\n" +
-    "\\widowctrl\\hyphauto\n" +
-    "\\f0\\fs18\n" +
-    body + "}";
+  const rtf = `{\\rtf1\\ansi\\deff0
+{\\fonttbl{\\f0\\fswiss\\fcharset0 Arial;}{\\f1\\fswiss\\fcharset0 Calibri;}}
+{\\colortbl;\\red100\\green100\\blue100;}
+{\\*\\generator OfferLab;}
+\\paperw12240\\paperh15840
+\\margl1080\\margr1080\\margt1080\\margb1080
+\\widowctrl\\hyphauto
+\\f1\\fs20
+${body}}`;
 
   const blob = new Blob([rtf], { type: "application/rtf" });
   const url = URL.createObjectURL(blob);
@@ -2195,17 +2181,12 @@ function AppTracker({ sessions, onStartPrep }) {
         )}
 
         {addingResume && (
-          <div style={{ padding: "16px 18px", background: T.surface, borderRadius: 10, border: "1px solid " + T.border }}>
+          <div style={{ padding: "12px 14px", background: T.surface, borderRadius: 8, border: "1px solid " + T.border }}>
             <Inp value={resumeNameDraft} onChange={setResumeNameDraft} placeholder="简历名称（如：中文版、英文版、产品岗）"/>
-            <div style={{ marginTop: 16, marginBottom: 12 }}>
-              <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: fileUploading ? "default" : "pointer", padding: "14px", border: "1.5px dashed " + (fileUploading ? T.dim : T.accent + "66"), borderRadius: 8, background: fileUploading ? T.bg : T.accentDim, transition: "all .15s" }}
-                onMouseEnter={e => { if (!fileUploading) { e.currentTarget.style.borderColor = T.accent; e.currentTarget.style.background = T.accentDim; }}}
-                onMouseLeave={e => { if (!fileUploading) { e.currentTarget.style.borderColor = T.accent + "66"; }}}>
-                {fileUploading ? <Spinner/> : <span style={{ fontSize: 16, color: T.accent }}>↑</span>}
-                <div>
-                  <p style={{ color: fileUploading ? T.subtle : T.accent, fontSize: 13, fontWeight: 500, margin: 0, fontFamily: T.body }}>{fileUploading ? "解析中..." : "上传简历文件"}</p>
-                  {!fileUploading && <p style={{ color: T.subtle, fontSize: 11, margin: 0, fontFamily: T.body }}>支持 PDF、Word (.docx)</p>}
-                </div>
+            <div style={{ marginTop: 10, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: fileUploading ? "default" : "pointer", padding: "5px 10px", border: "1px dashed " + T.borderBright, borderRadius: 6, color: fileUploading ? T.subtle : T.muted, fontSize: 12, fontFamily: T.body, opacity: fileUploading ? 0.6 : 1 }}>
+                {fileUploading ? <Spinner/> : <span>↑</span>}
+                {fileUploading ? "解析中..." : "上传 PDF / Word"}
                 <input type="file" accept=".pdf,.docx" style={{ display: "none" }} disabled={fileUploading} onChange={(e) => {
                   const file = e.target.files[0];
                   if (!file) return;
@@ -2220,84 +2201,66 @@ function AppTracker({ sessions, onStartPrep }) {
                   }
                   const isPdf = file.name.toLowerCase().endsWith(".pdf");
                   if (isPdf) {
-                    const PDFJS_CDN = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js";
-                    const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
-                    const loadScript = (src) => new Promise((resolve, reject) => {
-                      if (document.querySelector("script[data-pdfjs]")) { resolve(); return; }
-                      const s = document.createElement("script");
-                      s.src = src; s.setAttribute("data-pdfjs", "1");
-                      s.onload = resolve; s.onerror = reject;
-                      document.head.appendChild(s);
-                    });
-                    loadScript(PDFJS_CDN)
-                      .then(function() {
-                        window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
-                        return file.arrayBuffer();
-                      })
-                      .then(function(ab) {
-                        return window.pdfjsLib.getDocument({ data: new Uint8Array(ab) }).promise;
-                      })
-                      .then(function(pdf) {
-                        var pages = [];
-                        for (var i = 1; i <= pdf.numPages; i++) pages.push(i);
-                        return pages.reduce(function(chain, pageNum) {
-                          return chain.then(function(texts) {
-                            return pdf.getPage(pageNum).then(function(page) {
-                              return page.getTextContent();
-                            }).then(function(tc) {
-                              texts.push(tc.items.map(function(it) { return it.str; }).join(" "));
-                              return texts;
-                            });
-                          });
-                        }, Promise.resolve([]));
-                      })
-                      .then(function(texts) {
-                        var text = texts.join("\n").trim();
-                        if (!text || text.length < 30) {
-                          setFileError("PDF 内容无法读取，请直接粘贴文字");
-                        } else {
-                          setResumeDraft(text);
+                    // PDF: extract text in browser using pdfjs-dist
+                    import("pdfjs-dist").then(async (pdfjsLib) => {
+                      try {
+                        pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+                        const ab = await file.arrayBuffer();
+                        const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+                        let text = "";
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                          const page = await pdf.getPage(i);
+                          const tc = await page.getTextContent();
+                          text += tc.items.map(it => it.str).join(" ") + "
+";
                         }
-                      })
-                      .catch(function() { setFileError("PDF 解析失败，请直接粘贴文字"); })
-                      .finally(function() { setFileUploading(false); e.target.value = ""; });
+                        // Send extracted text to backend for AI cleanup
+                        return fetch("/api/parse-resume", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ rawText: text, fileName: file.name }),
+                        });
+                      } catch(err) {
+                        throw new Error("PDF 解析失败，请直接粘贴文字");
+                      }
+                    })
+                    .then(r => r && r.json ? r.json() : null)
+                    .then(d => {
+                      if (d && d.text) setResumeDraft(d.text);
+                      else if (d && d.error) setFileError(d.error);
+                    })
+                    .catch(err => setFileError(err.message || "解析失败，请直接粘贴文字"))
+                    .finally(() => { setFileUploading(false); e.target.value = ""; });
                   } else {
+                    // Word: send to backend
                     const reader = new FileReader();
-                    reader.onload = function(ev) {
+                    reader.onload = (ev) => {
                       const base64 = ev.target.result.split(",")[1];
                       fetch("/api/parse-resume", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ fileData: base64, fileName: file.name }),
                       })
-                        .then(function(r) {
-                          if (!r.ok) return r.json().then(function(d) { throw new Error(d.error || "服务器错误 " + r.status); });
+                        .then(r => {
+                          if (!r.ok) return r.json().then(d => { throw new Error(d.error || "服务器错误 " + r.status); });
                           return r.json();
                         })
-                        .then(function(d) {
+                        .then(d => {
                           if (d.text) setResumeDraft(d.text);
                           else setFileError(d.error || "解析失败，请直接粘贴文字");
                         })
-                        .catch(function(err) { setFileError(err.message || "上传失败，请直接粘贴文字"); })
-                        .finally(function() { setFileUploading(false); e.target.value = ""; });
+                        .catch(err => setFileError(err.message || "上传失败，请直接粘贴文字"))
+                        .finally(() => { setFileUploading(false); e.target.value = ""; });
                     };
                     reader.readAsDataURL(file);
                   }
                 }}/>
               </label>
-              {fileError && <p style={{ color: T.red, fontSize: 12, margin: "6px 0 0", fontFamily: T.body }}>{fileError}</p>}
-              {resumeDraft && !fileUploading && (
-                <div style={{ marginTop: 8, padding: "8px 12px", background: T.greenDim, borderRadius: 6, display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ color: T.green, fontSize: 13 }}>✓</span>
-                  <span style={{ color: T.green, fontSize: 12, fontFamily: T.body }}>已识别 {resumeDraft.length} 字，可在下方确认或修改</span>
-                </div>
-              )}
+              {fileError && <span style={{ color: T.red, fontSize: 12 }}>{fileError}</span>}
+              <span style={{ color: T.subtle, fontSize: 11 }}>或直接粘贴↓</span>
             </div>
-            <div style={{ marginBottom: 6 }}>
-              <p style={{ color: T.subtle, fontSize: 11, marginBottom: 4, fontFamily: T.body }}>或直接粘贴文字内容</p>
-              <TA value={resumeDraft} onChange={setResumeDraft} placeholder="粘贴简历文字内容..." rows={resumeDraft ? 6 : 3}/>
-            </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+            <TA value={resumeDraft} onChange={setResumeDraft} placeholder="粘贴简历文字内容..." rows={6}/>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
               <Btn size="sm" onClick={() => {
                 if (!resumeDraft.trim()) return;
                 const newR = { id: "r_" + Date.now(), name: resumeNameDraft || "简历 " + (resumes.length + 1), text: resumeDraft };
