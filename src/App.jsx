@@ -2201,8 +2201,8 @@ function AppTracker({ sessions, onStartPrep }) {
                   }
                   const isPdf = file.name.toLowerCase().endsWith(".pdf");
                   if (isPdf) {
-                    const PDFJS_CDN = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-                    const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+                    const PDFJS_CDN = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js";
+                    const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
                     const loadScript = (src) => new Promise((resolve, reject) => {
                       if (document.querySelector("script[data-pdfjs]")) { resolve(); return; }
                       const s = document.createElement("script");
