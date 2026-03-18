@@ -1,16 +1,25 @@
-# React + Vite
+# OfferLab · AI 求职助手
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> 面向商科生的 AI 全流程求职工具，支持投递追踪、简历优化、模拟面试与面试复盘。
 
-Currently, two official plugins are available:
+**Live:** [offerlab.it.com](https://offerlab.it.com)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **投递追踪** — 记录投递进度，自动生成招呼语与简历优化建议
+- **AI 模拟面试** — 根据 JD 和简历生成面试题，实时评分并给出 STAR 法则改写建议
+- **面试复盘** — 粘贴面试内容，AI 深度分析表现并给出行动建议
+- **简历优化** — 对照 JD 逐条优化简历，支持导出 RTF 格式
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+| Layer | Tech |
+|---|---|
+| Frontend | React + Vite（单文件 `src/App.jsx`） |
+| Backend | Vercel API Routes |
+| AI | DeepSeek API |
+| Search | Serper API |
+| Storage | localStorage |
+| Deploy | Vercel + Cloudflare DNS |
