@@ -17,9 +17,11 @@
 
 | Layer | Tech |
 |---|---|
-| Frontend | React + Vite（单文件 `src/App.jsx`） |
+| Frontend | React + Vite |
 | Backend | Vercel API Routes |
 | AI | DeepSeek API |
 | Search | Serper API |
 | Storage | localStorage |
 | Deploy | Vercel + Cloudflare DNS |
+
+**Author:** Ivy Lin · www.linkedin.com/in/ivy-lin-3804282a0
