@@ -1853,7 +1853,7 @@ ${changeList}
               {greetings.map((g, idx) => (
                 <div key={g.id} style={{ marginBottom: 32, paddingBottom: 32, borderBottom: "1px solid " + T.border }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
-                    <span style={{ color: T.subtle, fontSize: 12, letterSpacing: "0.04em" }}>{idx === 0 ? "📝 简洁版（200字）" : "📋 完整版（600字）"}</span>
+                    <span style={{ color: T.subtle, fontSize: 12, letterSpacing: "0.04em" }}>{idx === 0 ? "简洁版（200字）" : "完整版（600字）"}</span>
                     {idx === 0 && <button onClick={generateGreetings} style={{ background: "none", border: "none", color: T.muted, fontSize: 13, cursor: "pointer", fontFamily: T.body }}>重新生成</button>}
                   </div>
                   {g.highlight && <p style={{ color: T.accent, fontSize: 13, marginBottom: 10 }}>{g.highlight}</p>}
