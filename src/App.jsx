@@ -1653,7 +1653,7 @@ function AppToolkit({ app, baseResume, resumes = [] }) {
           "公司：" + app.company + "\n职位：" + app.role +
           "\nJD原文（必须引用其中2-3个关键词）：" + (jd||"").slice(0,600) +
           "\n求职者简历（提取最强经历）：" + effectiveResume.slice(0,800) +
-          '\n\n返回JSON：{"greetings":[{"id":"g1","text":"招呼语正文（500-600字，中文，包含简历所有相关经历）","highlight":"3-5个引用的JD关键词"}]}',
+          '\n\n返回两个版本的JSON：{"greetings":[{"id":"g1","text":"简洁版招呼语（180-220字，开头您好，结尾期待回复，只写最强2-3个匹配点）","highlight":"3个核心JD关键词"},{"id":"g2","text":"完整版招呼语（500-600字，开头您好，结尾期待回复，把简历所有相关经历都写进去供用户删减）","highlight":"5个JD关键词"}]}',
           2000
         );
         const result = extractJSON(raw);
@@ -1853,7 +1853,7 @@ ${changeList}
               {greetings.map((g, idx) => (
                 <div key={g.id} style={{ marginBottom: 32, paddingBottom: 32, borderBottom: "1px solid " + T.border }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
-                    <span style={{ color: T.subtle, fontSize: 12, letterSpacing: "0.04em" }}>招呼语 {idx + 1}</span>
+                    <span style={{ color: T.subtle, fontSize: 12, letterSpacing: "0.04em" }}>{idx === 0 ? "📝 简洁版（200字）" : "📋 完整版（600字）"}</span>
                     {idx === 0 && <button onClick={generateGreetings} style={{ background: "none", border: "none", color: T.muted, fontSize: 13, cursor: "pointer", fontFamily: T.body }}>重新生成</button>}
                   </div>
                   {g.highlight && <p style={{ color: T.accent, fontSize: 13, marginBottom: 10 }}>{g.highlight}</p>}
