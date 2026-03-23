@@ -188,10 +188,11 @@ function Spinner() {
   return <div style={{ width: 16, height: 16, border: "2px solid " + T.dim, borderTop: "2px solid " + T.accent, borderRadius: "50%", animation: "spin .7s linear infinite", flexShrink: 0 }}/>;
 }
 
-function TA({ value, onChange, placeholder, rows = 5 }) {
+function TA({ value, onChange, placeholder, rows = 5, variant = "default" }) {
   const [foc, setFoc] = useState(false);
+  const isCard = variant === "card";
   return <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} rows={rows} onFocus={() => setFoc(true)} onBlur={() => setFoc(false)}
-    style={{ width: "100%", background: foc ? T.surface : T.bg, border: "none", borderBottom: "1px solid " + (foc ? T.accent : T.border), borderRadius: 0, padding: "14px 0px", color: T.text, fontSize: 15, fontFamily: T.body, resize: "vertical", outline: "none", lineHeight: 1.85, boxSizing: "border-box", fontWeight: 400, transition: "all .18s" }}/>;
+    style={{ width: "100%", background: T.surface, border: isCard ? "1px solid " + (foc ? T.accent : T.border) : "none", borderBottom: isCard ? "1px solid " + (foc ? T.accent : T.border) : "1px solid " + (foc ? T.accent : T.border), borderRadius: isCard ? 8 : 0, padding: isCard ? "14px 16px" : "14px 0px", color: T.text, fontSize: 15, fontFamily: T.body, resize: "vertical", outline: "none", lineHeight: 1.85, boxSizing: "border-box", fontWeight: 400, transition: "all .18s" }}/>;
 }
 
 function Inp({ value, onChange, placeholder }) {
@@ -294,7 +295,7 @@ function PhaseJobInfo({ session, update, onNext }) {
           {INTERVIEW_ROUNDS.map(r => {
             const active = (session.interviewRound||"") === r.label;
             return (
-              <button key={r.id} onClick={() => update({ interviewRound: r.label, interviewFocus: r.focus })}
+              <button key={r.id} onClick={() => { const wasRound = session.interviewRound; if (wasRound && wasRound !== r.label) { update({ interviewRound: r.label, interviewFocus: r.focus, questions: [] }); } else { update({ interviewRound: r.label, interviewFocus: r.focus }); } }}
                 style={{ background: active ? T.accent : T.surface, border: "1.5px solid " + (active ? T.accent : T.border), borderRadius: 8, padding: "14px 16px", cursor: "pointer", textAlign: "left", transition: "all .15s" }}>
                 <p style={{ color: active ? "#fff" : T.text, fontSize: 15, fontWeight: 500, marginBottom: 4 }}>{r.label}</p>
                 <p style={{ color: active ? "rgba(255,255,255,0.7)" : T.subtle, fontSize: 12 }}>{r.desc}</p>
@@ -374,8 +375,49 @@ function PhaseJobInfo({ session, update, onNext }) {
         <TA value={session.jd} onChange={v => update({ jd: v })} placeholder="粘贴职位描述 JD..." rows={8}/>
       </div>
       <div>
-        <p style={{ color: T.subtle, fontSize: 12, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 16 }}>简历（可选）</p>
-        <TA value={session.resume} onChange={v => update({ resume: v })} placeholder="粘贴简历内容，AI 将生成更有针对性的题目..." rows={6}/>
+        <p style={{ color: T.subtle, fontSize: 12, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 12 }}>简历（可选）</p>
+        {(() => {
+          // Auto-read from resume library
+          let libResumes = [];
+          try { libResumes = JSON.parse(localStorage.getItem("resumes") || "[]"); } catch(e) {}
+          const hasLib = libResumes.length > 0;
+          const hasResume = session.resume && session.resume.trim().length > 0;
+          if (hasResume) {
+            const wordCount = session.resume.trim().length;
+            return (
+              <div style={{ padding: "12px 14px", background: T.greenDim, borderRadius: 8, border: "1px solid " + T.green + "44", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <p style={{ color: T.green, fontSize: 13, fontWeight: 500, margin: 0 }}>已读取简历 · {wordCount} 字</p>
+                  <p style={{ color: T.green, fontSize: 11, margin: "2px 0 0", opacity: 0.8 }}>AI 将根据此简历生成更有针对性的题目</p>
+                </div>
+                <button onClick={() => update({ resume: "" })} style={{ background: "none", border: "none", color: T.green, fontSize: 12, cursor: "pointer", fontFamily: T.body, opacity: 0.7 }}>移除</button>
+              </div>
+            );
+          }
+          if (hasLib) {
+            return (
+              <div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {libResumes.map(r => (
+                    <button key={r.id} onClick={() => update({ resume: r.text })}
+                      style={{ background: T.surface, border: "1px solid " + T.border, borderRadius: 8, padding: "10px 14px", cursor: "pointer", textAlign: "left", fontFamily: T.body, transition: "border-color .15s" }}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = T.accent}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = T.border}>
+                      <p style={{ color: T.text, fontSize: 13, fontWeight: 500, margin: 0 }}>{r.name}</p>
+                      <p style={{ color: T.subtle, fontSize: 11, margin: "2px 0 0" }}>{r.text.length} 字</p>
+                    </button>
+                  ))}
+                </div>
+                <p style={{ color: T.subtle, fontSize: 11, marginTop: 8 }}>选择简历后 AI 将生成更有针对性的题目</p>
+              </div>
+            );
+          }
+          return (
+            <div style={{ padding: "12px 14px", background: T.bg, borderRadius: 8, border: "1px dashed " + T.border }}>
+              <p style={{ color: T.subtle, fontSize: 13, margin: 0 }}>简历库为空，可先在「投递追踪」中添加简历</p>
+            </div>
+          );
+        })()}
       </div>
       <Btn onClick={handleNext} disabled={!session.company || !session.role} full size="lg">生成面试题 →</Btn>
     </div>
@@ -419,11 +461,21 @@ function extractJSON(text) {
 }
 
 //  Phase 1: Mock Interview 
-const Q_TYPES = ["行为", "技术", "情景", "动机", "综合"];
+const Q_TYPES = ["行为", "技术", "情景", "动机", "综合", "案例", "认知", "压力"];
 
 function PhaseMock({ session, update, onNext }) {
   const [questions, setQuestions] = useState(session.questions || []);
   const [loading, setLoading] = useState(false);
+  // Reset questions when round changes (user went back and picked a different round)
+  const prevRoundRef = useRef(session.interviewRound);
+  useEffect(() => {
+    if (prevRoundRef.current !== session.interviewRound) {
+      prevRoundRef.current = session.interviewRound;
+      setQuestions([]);
+      setAnswers([]);
+      setFeedbacks([]);
+    }
+  }, [session.interviewRound]);
   const [loadingStep, setLoadingStep] = useState(0);
   const [genError, setGenError] = useState("");
   const [activeQ, setActiveQ] = useState(0);
@@ -528,11 +580,11 @@ function PhaseMock({ session, update, onNext }) {
     }, 1800);
 
     const roundGuide = {
-      "一面": "重点考察基础技能、自我介绍和岗位匹配度",
-      "二面": "深度技术追问、项目经验和案例分析",
-      "三面": "战略思维、领导力和高管层面考察",
-      "HR面": "薪资期望、入职时间、职业规划和文化契合",
-    }[round] || "综合考察候选人能力";
+      "一面": "结合候选人简历经历和公司背景出题：1-2题自我介绍/动机类，3-4题基于简历具体经历的行为题（STAR），2题与JD匹配的基础能力题。难度中等，避免过于抽象的战略题",
+      "二面": "业务面深度考察：以情景题和案例分析为主，要求候选人展示业务判断力和数据思维。结合JD核心岗位职责出题，2-3题需要候选人给出具体方案或数字，难度较高",
+      "三面": "高管视角考察：职业规划、商业判断、跨团队协作、行业认知。题目开放性强，考察战略思维和价值观，难度高",
+      "HR面": "只出HR类问题（期望薪资、入职时间、离职原因、职业规划、团队适配），不出任何业务或技术题，难度低",
+    }[round] || "综合考察：结合简历经历出行为题，结合JD出能力题，行为题与业务题各半，难度适中";
 
     const jdText = session.jdSummary || (session.jd||"").slice(0,400);
     const resumeText = session.resumeSummary || (session.resume||"").slice(0,400);
@@ -544,11 +596,11 @@ function PhaseMock({ session, update, onNext }) {
     const researchHints = session.research?.summary?.questions?.length
       ? "\n网上面经中常见考察点（参考这些出题，不要照抄）：\n" + session.research.summary.questions.slice(0,5).map((q,i) => `${i+1}. ${q}`).join("\n")
       : "";
-    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${resumeText}${researchHints}\n\n请生成5道有针对性的面试题，覆盖不同考察维度。${langRule}\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"3-5句参考答案要点","tips":"回答思路提示"}]}\n共5题，难度适中，针对${round || "本轮"}面试。`;
+    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${resumeText}${researchHints}\n\n请生成7道有针对性的面试题，覆盖不同考察维度。${langRule}\n\nreference字段要求（重要）：\n- 写一段完整的示范回答，300-400字，用第一人称，像真人在面试中说话\n- 行为题必须用STAR结构：情境（我当时在XX公司负责XX）→任务（面临的挑战是）→行动（我具体做了1.2.3）→结果（最终数据/量化成果）\n- 必须包含至少一个具体数字或案例，不能泛泛而谈，例如"提升了转化率"要改成"次月转化率从3.2%提升到5.1%"\n- 技术/情景题：先给出明确观点，再用具体例子或数据支撑，最后总结为什么这样做\n- 语气自然流畅，不要用"首先其次最后"这种格式化表达，要像真实对话\n\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"完整示范回答150-250字","tips":"一句话回答思路"}]}\n共7题，严格按照面试重点控制难度，覆盖不同题型，不要重复同一类型超过2题。`;
 
     try {
       const system = "你是专业面试官，只输出合法JSON，不含任何markdown，不含代码块，直接输出{开头的JSON，用中文。";
-      const raw = await callClaude(prompt, 2000, { system });
+      const raw = await callClaude(prompt, 3200, { system });
       const fullText = raw.startsWith("{") ? raw : '{"questions":[' + raw;
       const result = extractJSON(fullText);
       let qs;
@@ -619,7 +671,7 @@ function PhaseMock({ session, update, onNext }) {
   if (!questions.length) return (
     <div>
       <h2 style={{ color: T.text, fontSize: 28, fontWeight: 400, letterSpacing: "-0.03em", marginBottom: 12, fontFamily: T.head }}>AI 面试模拟</h2>
-      <p style={{ color: T.muted, fontSize: 15, lineHeight: 1.8, marginBottom: 48 }}>正在生成 5 道{session.interviewRound ? " " + session.interviewRound : ""}面试题...</p>
+      <p style={{ color: T.muted, fontSize: 15, lineHeight: 1.8, marginBottom: 48 }}>正在生成 7 道{session.interviewRound ? " " + session.interviewRound : ""}面试题...</p>
       {genError ? (
         <div>
           <div style={{ borderLeft: "1.5px solid " + T.red, paddingLeft: 14, marginBottom: 28, color: T.red, fontSize: 14 }}>{genError}</div>
@@ -1122,61 +1174,20 @@ ${compressed.slice(0, 2000)}
 
   return (
     <div>
-      <div style={{ marginBottom: 44 }}>
-        <h2 style={{ color: T.text, fontSize: 28, fontWeight: 400, letterSpacing: "-0.03em", marginBottom: 10, fontFamily: T.head }}>真实面试复盘</h2>
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ color: T.text, fontSize: 28, fontWeight: 400, letterSpacing: "-0.03em", marginBottom: 10, fontFamily: T.head }}>面试复盘</h2>
         <p style={{ color: T.muted, fontSize: 14 }}>{session.company}{session.role ? " · " + session.role : ""}{round ? " · " + round : ""}</p>
       </div>
       {!result && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-
-          {/* Mode selector — only 2 modes */}
-          <div style={{ display: "flex", gap: 0, borderRadius: 8, border: "1px solid " + T.border, overflow: "hidden" }}>
-            {[
-              { id: "record", label: "实时录音转文字" },
-              { id: "paste",  label: "粘贴文字" },
-            ].map((m, idx) => (
-              <button key={m.id} onClick={() => setInputMode(m.id)} style={{ flex: 1, padding: "10px 0", border: "none", borderRight: idx === 0 ? "1px solid " + T.border : "none", background: inputMode === m.id ? T.accent : T.surface, color: inputMode === m.id ? "#fff" : T.muted, fontSize: 13, cursor: "pointer", fontFamily: T.body, transition: "all .15s" }}>
-                {m.label}
-              </button>
-            ))}
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <div>
+            <p style={{ color: T.subtle, fontSize: 12, marginBottom: 8 }}>粘贴面试内容</p>
+            <TA value={transcript} onChange={setTranscript} rows={12} variant="card" placeholder={"面试官：请做一个自我介绍\n我：\n\n面试官：你为什么选择我们公司？\n我："}/>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+              <p style={{ color: T.subtle, fontSize: 11, margin: 0 }}>支持凭记忆整理、会议字幕、语音转文字 · 请确保内容符合当地法规及面试方要求</p>
+              {transcript.length > 0 && <button onClick={() => setTranscript("")} style={{ background: "none", border: "none", color: T.subtle, fontSize: 12, cursor: "pointer", fontFamily: T.body, flexShrink: 0, marginLeft: 12 }}>清空</button>}
+            </div>
           </div>
-          <p style={{ color: T.subtle, fontSize: 12, marginTop: 8 }}>建议用录音软件录完后转文字粘贴，效果更准确</p>
-          {inputMode === "record" && (
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <p style={{ color: T.subtle, fontSize: 12, fontWeight: 500, letterSpacing: "0.06em" }}>实时识别 · Chrome / Edge</p>
-                <button
-                  onClick={recording ? stopRecording : startRecording}
-                  style={{ display: "flex", alignItems: "center", gap: 6, background: recording ? T.red+"11" : "none", border: "1px solid " + (recording ? T.red : T.border), borderRadius: 20, padding: "5px 14px", color: recording ? T.red : T.muted, fontSize: 12, cursor: "pointer", fontFamily: T.body, transition: "all .2s", boxShadow: recording ? "0 0 0 3px " + T.red + "18" : "none" }}>
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: recording ? T.red : T.subtle, display: "inline-block", flexShrink: 0, animation: recording ? "pulse 1s infinite" : "none" }}/>
-                  {recording ? "录音中" : "开始录音"}
-                </button>
-              </div>
-              {/* Interim preview */}
-              {recording && (
-                <div style={{ marginBottom: 8, padding: "10px 14px", borderRadius: 8, background: T.red+"08", border: "1px solid " + T.red+"33", minHeight: 36 }}>
-                  <p style={{ color: T.red, fontSize: 13, lineHeight: 1.6, margin: 0, fontStyle: interim ? "normal" : "italic" }}>
-                    {interim || "请说话..."}
-                  </p>
-                </div>
-              )}
-              <TA value={transcript} onChange={setTranscript} rows={8} placeholder="识别的文字会实时出现在这里，也可以手动编辑..."/>
-              {transcript.length > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-                  <p style={{ color: T.subtle, fontSize: 12 }}>{transcript.length} 字</p>
-                  <button onClick={() => setTranscript("")} style={{ background: "none", border: "none", color: T.subtle, fontSize: 12, cursor: "pointer", fontFamily: T.body }}>清空</button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Paste mode */}
-          {inputMode === "paste" && (
-            <div>
-              <TA value={transcript} onChange={setTranscript} rows={10} placeholder="粘贴面试录音转录文字..."/>
-              {transcript.length > 0 && <p style={{ color: T.subtle, fontSize: 12, marginTop: 6 }}>{transcript.length} 字</p>}
-            </div>
-          )}
 
           {qs.length > 0 && (
             <div>
@@ -1638,12 +1649,12 @@ function AppToolkit({ app, baseResume, resumes = [] }) {
       let gs;
       {
         const raw = await callClaude(
-          "你是顶尖求职文案专家，专门写让HR眼前一亮、忍不住回复的招呼语。\n\n写作要求：\n- 180-220字，分3段，第一人称，用中文写\n- 第一段（2-3句）：用最强的一个经历开场，必须包含具体公司名/项目名/数字，让HR立刻知道你是谁\n- 第二段（2-3句）：精准对应JD，直接引用JD中的2-3个关键词，说明你的经历如何匹配这个岗位的核心需求\n- 第三段（1-2句）：表达主动性和对这家公司的了解，体现你做过research，结尾自然有力\n- 禁止：「您好」「贵公司」「非常感兴趣」「期待与您」「希望能」等套话\n- 每句话都要有实质信息，不允许废话\n\n" +
+          "你是顶尖求职文案专家，专门写让HR眼前一亮的招呼语。\n\n【最重要的原则】：所有内容必须100%基于下面提供的简历原文，严禁编造任何经历、数字、公司名、项目名。\n\n写作要求：\n- 500-600字，第一人称，用中文写\n- 把简历中所有与JD相关的经历全部写进去，让用户自己决定删减哪些\n- 开头：用最强的一个经历开场，直接引用简历中的公司名/项目名/数字\n- 中间：把简历里所有匹配JD的经历逐一展开，每个经历2-3句话，包含具体数字和成果\n- 对应JD的每个核心要求，找到简历中对应的真实经历来回应\n- 结尾：表达主动性，自然有力\n- 禁止：「您好」「贵公司」「非常感兴趣」「期待与您」「希望能」等套话\n- 禁止：编造简历中不存在的经历、数字、项目\n- 每句话都要有实质信息，不允许废话\n\n" +
           "公司：" + app.company + "\n职位：" + app.role +
           "\nJD原文（必须引用其中2-3个关键词）：" + (jd||"").slice(0,600) +
           "\n求职者简历（提取最强经历）：" + effectiveResume.slice(0,800) +
-          '\n\n返回JSON：{"greetings":[{"id":"g1","text":"招呼语正文（180-220字，中文）","highlight":"3个引用的JD关键词"}]}',
-          1000
+          '\n\n返回JSON：{"greetings":[{"id":"g1","text":"招呼语正文（500-600字，中文，包含简历所有相关经历）","highlight":"3-5个引用的JD关键词"}]}',
+          2000
         );
         const result = extractJSON(raw);
         if (result && result.greetings) gs = result.greetings.map(g => ({ ...g, custom: "" }));
