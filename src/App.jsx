@@ -1356,7 +1356,6 @@ async function ocrImages(files) {
 
 //  Word download helper (browser-side) 
 function downloadAsWord(text, filename) {
-  // Build RTF — proper format Word actually respects
   const esc = (s) => s
     .replace(/\\/g, "\\\\")
     .replace(/\{/g, "\\{")
@@ -1369,56 +1368,60 @@ function downloadAsWord(text, filename) {
 
   const lines = text.split("\n").map(l => l.trim());
   let body = "";
-
-  // RTF paragraph styles:
-  // \sb = space before (twips), \sa = space after, \sl = line spacing
-  // \fs = font size in half-points (22 = 11pt, 20 = 10pt, 26 = 13pt, 32 = 16pt)
-  // \b = bold, \b0 = end bold
-
   let isFirst = true;
+  const DATE_RE = /\d{4}[./]\d{2}|\d{4}\s*[-\u2013]\s*(\d{4}|present|\u81f3\u4eca|now)/i;
+
   for (const line of lines) {
-    if (!line) {
-      body += "{\\pard\\sb0\\sa80\\sl240\\slmult1\\par}\n";
-      continue;
-    }
+    if (!line) { body += "{\\pard\\sb0\\sa15\\par}\n"; continue; }
 
     const isName = isFirst;
-    const isSection = !isFirst && (
-      /^(EDUCATION|EXPERIENCE|SKILLS|PROFESSIONAL|SUMMARY|WORK|PROJECTS|AWARDS|LANGUAGES|CERTIFICATIONS|教育|工作经历|实习|技能|项目|荣誉|证书|语言)/.test(line.toUpperCase()) ||
-      (line.length < 30 && line === line.toUpperCase() && /[A-Z\u4e00-\u9fa5]/.test(line))
-    );
-    const isBullet = /^[•·\-\*]/.test(line);
-    const isContactLine = isFirst === false && !isSection && !isBullet && line.includes("|") && line.length < 120;
+    const upperLine = line.toUpperCase();
+    const isSection =
+      !isFirst && line.length < 40 && !DATE_RE.test(line) && (
+        /^(EDUCATION|EXPERIENCE|SKILLS|PROFESSIONAL|SUMMARY|WORK|PROJECTS|AWARDS|LANGUAGES|AI|\u6559\u80b2|\u5de5\u4f5c\u7ecf\u5386|\u5b9e\u4e60\u7ecf\u5386|\u6280\u80fd|\u9879\u76ee|\u8363\u8a89|\u8bc1\u4e66|\u8bed\u8a00|\u7ec4\u7ec7|\u6d3b\u52a8)/.test(upperLine) ||
+        (line.length < 25 && /^[\u4e00-\u9fa5A-Z]/.test(line) && !/[|\u00b7\u2022\-]/.test(line))
+      );
+    const isBullet = /^[\u2022\u00b7\-\*]/.test(line);
+    const isContact = !isFirst && !isSection && !isBullet && line.includes("|") && line.length < 150 && !DATE_RE.test(line);
+    const hasDate = DATE_RE.test(line);
 
     if (isName) {
-      // Name: centered, 16pt bold
-      body += `{\\pard\\qc\\sb0\\sa60\\b\\fs32 ${esc(line)}\\b0\\par}\n`;
+      body += "{\\pard\\qc\\sb0\\sa30\\b\\fs24 " + esc(line) + "\\b0\\par}\n";
       isFirst = false;
-    } else if (isContactLine) {
-      // Contact info: centered, 9pt
-      body += `{\\pard\\qc\\sb0\\sa80\\fs18 ${esc(line)}\\par}\n`;
+    } else if (isContact) {
+      body += "{\\pard\\qc\\sb0\\sa25\\fs17 " + esc(line) + "\\par}\n";
     } else if (isSection) {
-      // Section header: 11pt bold, line below via bottom border
-      body += `{\\pard\\sb180\\sa60\\brdrb\\brdrs\\brdrw10\\brdrcf1\\b\\fs22 ${esc(line.toUpperCase())}\\b0\\par}\n`;
+      body += "{\\pard\\sb100\\sa25\\brdrb\\brdrs\\brdrw8\\brdrcf1\\b\\fs20 " + esc(line) + "\\b0\\par}\n";
     } else if (isBullet) {
-      // Bullet: 10pt, indented
-      const content = line.replace(/^[•·\-\*]\s*/, "");
-      body += `{\\pard\\li280\\fi-280\\sb0\\sa40\\fs20 \\bullet  ${esc(content)}\\par}\n`;
+      const cnt = line.replace(/^[\u2022\u00b7\-\*]\s*/, "");
+      body += "{\\pard\\li280\\fi-140\\sb0\\sa15\\fs18 \\bullet  " + esc(cnt) + "\\par}\n";
+    } else if (hasDate) {
+      const dateMatch = line.match(/(\d{4}[./\s\-\u2013].{3,20}?)\s*$/);
+      if (dateMatch) {
+        const dateStr = dateMatch[1].trim();
+        const mainStr = line.slice(0, line.lastIndexOf(dateStr)).replace(/[|\u00b7\s]+$/, "").trim();
+        if (mainStr) {
+          body += "{\\pard\\sb40\\sa8\\fs18\\tqr\\tx10800 \\b " + esc(mainStr) + "\\b0\\tab " + esc(dateStr) + "\\par}\n";
+        } else {
+          body += "{\\pard\\sb40\\sa8\\fs18 " + esc(line) + "\\par}\n";
+        }
+      } else {
+        body += "{\\pard\\sb40\\sa8\\b\\fs18 " + esc(line) + "\\b0\\par}\n";
+      }
     } else {
-      // Regular: 10pt
-      body += `{\\pard\\sb0\\sa40\\fs20 ${esc(line)}\\par}\n`;
+      body += "{\\pard\\sb0\\sa15\\fs18 " + esc(line) + "\\par}\n";
     }
   }
 
-  const rtf = `{\\rtf1\\ansi\\deff0
-{\\fonttbl{\\f0\\fswiss\\fcharset0 Arial;}{\\f1\\fswiss\\fcharset0 Calibri;}}
-{\\colortbl;\\red100\\green100\\blue100;}
-{\\*\\generator OfferLab;}
-\\paperw12240\\paperh15840
-\\margl1080\\margr1080\\margt1080\\margb1080
-\\widowctrl\\hyphauto
-\\f1\\fs20
-${body}}`;
+  const rtf = "{\\rtf1\\ansi\\ansicpg936\\deff0\n" +
+    "{\\fonttbl{\\f0\\fswiss\\fcharset134 Microsoft YaHei;}{\\f1\\fswiss\\fcharset0 Calibri;}}\n" +
+    "{\\colortbl;\\red80\\green80\\blue80;}\n" +
+    "{\\*\\generator OfferLab;}\n" +
+    "\\paperw12240\\paperh15840\n" +
+    "\\margl720\\margr720\\margt600\\margb600\n" +
+    "\\widowctrl\\hyphauto\n" +
+    "\\f0\\fs18\n" +
+    body + "}";
 
   const blob = new Blob([rtf], { type: "application/rtf" });
   const url = URL.createObjectURL(blob);
@@ -2181,12 +2184,17 @@ function AppTracker({ sessions, onStartPrep }) {
         )}
 
         {addingResume && (
-          <div style={{ padding: "12px 14px", background: T.surface, borderRadius: 8, border: "1px solid " + T.border }}>
+          <div style={{ padding: "16px 18px", background: T.surface, borderRadius: 10, border: "1px solid " + T.border }}>
             <Inp value={resumeNameDraft} onChange={setResumeNameDraft} placeholder="简历名称（如：中文版、英文版、产品岗）"/>
-            <div style={{ marginTop: 10, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
-              <label style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: fileUploading ? "default" : "pointer", padding: "5px 10px", border: "1px dashed " + T.borderBright, borderRadius: 6, color: fileUploading ? T.subtle : T.muted, fontSize: 12, fontFamily: T.body, opacity: fileUploading ? 0.6 : 1 }}>
-                {fileUploading ? <Spinner/> : <span>↑</span>}
-                {fileUploading ? "解析中..." : "上传 PDF / Word"}
+            <div style={{ marginTop: 16, marginBottom: 12 }}>
+              <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: fileUploading ? "default" : "pointer", padding: "14px", border: "1.5px dashed " + (fileUploading ? T.dim : T.accent + "66"), borderRadius: 8, background: fileUploading ? T.bg : T.accentDim, transition: "all .15s" }}
+                onMouseEnter={e => { if (!fileUploading) { e.currentTarget.style.borderColor = T.accent; e.currentTarget.style.background = T.accentDim; }}}
+                onMouseLeave={e => { if (!fileUploading) { e.currentTarget.style.borderColor = T.accent + "66"; }}}>
+                {fileUploading ? <Spinner/> : <span style={{ fontSize: 16, color: T.accent }}>↑</span>}
+                <div>
+                  <p style={{ color: fileUploading ? T.subtle : T.accent, fontSize: 13, fontWeight: 500, margin: 0, fontFamily: T.body }}>{fileUploading ? "解析中..." : "上传简历文件"}</p>
+                  {!fileUploading && <p style={{ color: T.subtle, fontSize: 11, margin: 0, fontFamily: T.body }}>支持 PDF、Word (.docx)</p>}
+                </div>
                 <input type="file" accept=".pdf,.docx" style={{ display: "none" }} disabled={fileUploading} onChange={(e) => {
                   const file = e.target.files[0];
                   if (!file) return;
@@ -2201,66 +2209,84 @@ function AppTracker({ sessions, onStartPrep }) {
                   }
                   const isPdf = file.name.toLowerCase().endsWith(".pdf");
                   if (isPdf) {
-                    // PDF: extract text in browser using pdfjs-dist
-                    import("pdfjs-dist").then(async (pdfjsLib) => {
-                      try {
-                        pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
-                        const ab = await file.arrayBuffer();
-                        const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
-                        let text = "";
-                        for (let i = 1; i <= pdf.numPages; i++) {
-                          const page = await pdf.getPage(i);
-                          const tc = await page.getTextContent();
-                          text += tc.items.map(it => it.str).join(" ") + "
-";
+                    const PDFJS_CDN = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js";
+                    const PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+                    const loadScript = (src) => new Promise((resolve, reject) => {
+                      if (document.querySelector("script[data-pdfjs]")) { resolve(); return; }
+                      const s = document.createElement("script");
+                      s.src = src; s.setAttribute("data-pdfjs", "1");
+                      s.onload = resolve; s.onerror = reject;
+                      document.head.appendChild(s);
+                    });
+                    loadScript(PDFJS_CDN)
+                      .then(function() {
+                        window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+                        return file.arrayBuffer();
+                      })
+                      .then(function(ab) {
+                        return window.pdfjsLib.getDocument({ data: new Uint8Array(ab) }).promise;
+                      })
+                      .then(function(pdf) {
+                        var pages = [];
+                        for (var i = 1; i <= pdf.numPages; i++) pages.push(i);
+                        return pages.reduce(function(chain, pageNum) {
+                          return chain.then(function(texts) {
+                            return pdf.getPage(pageNum).then(function(page) {
+                              return page.getTextContent();
+                            }).then(function(tc) {
+                              texts.push(tc.items.map(function(it) { return it.str; }).join(" "));
+                              return texts;
+                            });
+                          });
+                        }, Promise.resolve([]));
+                      })
+                      .then(function(texts) {
+                        var text = texts.join("\n").trim();
+                        if (!text || text.length < 30) {
+                          setFileError("PDF 内容无法读取，请直接粘贴文字");
+                        } else {
+                          setResumeDraft(text);
                         }
-                        // Send extracted text to backend for AI cleanup
-                        return fetch("/api/parse-resume", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ rawText: text, fileName: file.name }),
-                        });
-                      } catch(err) {
-                        throw new Error("PDF 解析失败，请直接粘贴文字");
-                      }
-                    })
-                    .then(r => r && r.json ? r.json() : null)
-                    .then(d => {
-                      if (d && d.text) setResumeDraft(d.text);
-                      else if (d && d.error) setFileError(d.error);
-                    })
-                    .catch(err => setFileError(err.message || "解析失败，请直接粘贴文字"))
-                    .finally(() => { setFileUploading(false); e.target.value = ""; });
+                      })
+                      .catch(function() { setFileError("PDF 解析失败，请直接粘贴文字"); })
+                      .finally(function() { setFileUploading(false); e.target.value = ""; });
                   } else {
-                    // Word: send to backend
                     const reader = new FileReader();
-                    reader.onload = (ev) => {
+                    reader.onload = function(ev) {
                       const base64 = ev.target.result.split(",")[1];
                       fetch("/api/parse-resume", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ fileData: base64, fileName: file.name }),
                       })
-                        .then(r => {
-                          if (!r.ok) return r.json().then(d => { throw new Error(d.error || "服务器错误 " + r.status); });
+                        .then(function(r) {
+                          if (!r.ok) return r.json().then(function(d) { throw new Error(d.error || "服务器错误 " + r.status); });
                           return r.json();
                         })
-                        .then(d => {
+                        .then(function(d) {
                           if (d.text) setResumeDraft(d.text);
                           else setFileError(d.error || "解析失败，请直接粘贴文字");
                         })
-                        .catch(err => setFileError(err.message || "上传失败，请直接粘贴文字"))
-                        .finally(() => { setFileUploading(false); e.target.value = ""; });
+                        .catch(function(err) { setFileError(err.message || "上传失败，请直接粘贴文字"); })
+                        .finally(function() { setFileUploading(false); e.target.value = ""; });
                     };
                     reader.readAsDataURL(file);
                   }
                 }}/>
               </label>
-              {fileError && <span style={{ color: T.red, fontSize: 12 }}>{fileError}</span>}
-              <span style={{ color: T.subtle, fontSize: 11 }}>或直接粘贴↓</span>
+              {fileError && <p style={{ color: T.red, fontSize: 12, margin: "6px 0 0", fontFamily: T.body }}>{fileError}</p>}
+              {resumeDraft && !fileUploading && (
+                <div style={{ marginTop: 8, padding: "8px 12px", background: T.greenDim, borderRadius: 6, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ color: T.green, fontSize: 13 }}>✓</span>
+                  <span style={{ color: T.green, fontSize: 12, fontFamily: T.body }}>已识别 {resumeDraft.length} 字，可在下方确认或修改</span>
+                </div>
+              )}
             </div>
-            <TA value={resumeDraft} onChange={setResumeDraft} placeholder="粘贴简历文字内容..." rows={6}/>
-            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <div style={{ marginBottom: 6 }}>
+              <p style={{ color: T.subtle, fontSize: 11, marginBottom: 4, fontFamily: T.body }}>或直接粘贴文字内容</p>
+              <TA value={resumeDraft} onChange={setResumeDraft} placeholder="粘贴简历文字内容..." rows={resumeDraft ? 6 : 3}/>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
               <Btn size="sm" onClick={() => {
                 if (!resumeDraft.trim()) return;
                 const newR = { id: "r_" + Date.now(), name: resumeNameDraft || "简历 " + (resumes.length + 1), text: resumeDraft };
