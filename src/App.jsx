@@ -1146,7 +1146,14 @@ ${compressed.slice(0, 2000)}
   "businessTips": "内容深度与专业性的具体建议，指出哪些回答缺乏深度、如何补充行业洞察，3-4句",
   "persuasionTips": "表达效果与说服力的具体建议，指出哪些表达不够有力、如何改进，3-4句",
   "actionList": ["针对本次面试暴露问题的具体行动1（可操作的）", "具体行动2", "具体行动3", "具体行动4", "具体行动5"],
-  "nextRoundFocus": ["下轮面试需要重点准备的方向1（具体到知识点或案例类型）", "重点2", "重点3", "重点4", "重点5"]
+  "nextRoundFocus": ["下轮面试需要重点准备的方向1（具体到知识点或案例类型）", "重点2", "重点3", "重点4", "重点5"],
+  "jobFit": {
+    "matchScore": 数字1-10（基于面试表现和JD要求的匹配度）,
+    "verdict": "值得去/谨慎考虑/不建议" （三选一）,
+    "reasons": ["从岗位本身分析的理由1（成长空间/薪资市场水平/公司发展阶段）", "理由2", "理由3"],
+    "redFlags": ["需要警惕的点1（如果有）", "红旗2"],
+    "negotiationTips": "如果决定接受，谈判或入职时需要注意的1-2点建议"
+  }
 }`,
         4000,
         { system: "你是专业面试教练，只输出合法JSON，不含任何markdown代码块，直接以{开头，用中文。内容要具体，结合实际面试表现，不要输出空洞套话。" }
@@ -1286,6 +1293,39 @@ ${compressed.slice(0, 2000)}
             {(result.nextRoundFocus||[]).length > 0 && (
               <Section title="下轮备考重点">
                 <Lines items={result.nextRoundFocus} color={T.accent}/>
+              </Section>
+            )}
+
+            {result.jobFit && (
+              <Section title="岗位评估">
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24, padding: "16px 20px", background: result.jobFit.verdict === "值得去" ? T.greenDim : result.jobFit.verdict === "不建议" ? T.yellowDim : T.bg, borderRadius: 10, border: "1px solid " + (result.jobFit.verdict === "值得去" ? T.green + "44" : result.jobFit.verdict === "不建议" ? T.yellow + "44" : T.border) }}>
+                  <div>
+                    <p style={{ color: T.subtle, fontSize: 11, letterSpacing: "0.06em", marginBottom: 4 }}>综合评估</p>
+                    <p style={{ color: result.jobFit.verdict === "值得去" ? T.green : result.jobFit.verdict === "不建议" ? T.yellow : T.muted, fontSize: 18, fontWeight: 600, margin: 0 }}>{result.jobFit.verdict}</p>
+                  </div>
+                  <div style={{ marginLeft: "auto", textAlign: "right" }}>
+                    <p style={{ color: T.subtle, fontSize: 11, letterSpacing: "0.06em", marginBottom: 4 }}>匹配度</p>
+                    <p style={{ color: T.text, fontSize: 18, fontWeight: 600, margin: 0 }}>{result.jobFit.matchScore} <span style={{ fontSize: 13, color: T.subtle, fontWeight: 400 }}>/ 10</span></p>
+                  </div>
+                </div>
+                {(result.jobFit.reasons||[]).length > 0 && (
+                  <div style={{ marginBottom: 24 }}>
+                    <p style={{ fontSize: 11, color: T.muted, fontWeight: 500, letterSpacing: "0.06em", marginBottom: 14 }}>分析理由</p>
+                    <Lines items={result.jobFit.reasons} color={T.green}/>
+                  </div>
+                )}
+                {(result.jobFit.redFlags||[]).filter(x => x).length > 0 && (
+                  <div style={{ marginBottom: 24 }}>
+                    <p style={{ fontSize: 11, color: T.muted, fontWeight: 500, letterSpacing: "0.06em", marginBottom: 14 }}>需要注意</p>
+                    <Lines items={result.jobFit.redFlags} color={T.yellow}/>
+                  </div>
+                )}
+                {result.jobFit.negotiationTips && (
+                  <div style={{ padding: "14px 16px", background: T.accentDim, borderRadius: 8, border: "1px solid " + T.accent + "33" }}>
+                    <p style={{ color: T.subtle, fontSize: 11, letterSpacing: "0.06em", marginBottom: 8 }}>入职/谈判建议</p>
+                    <p style={{ color: T.text, fontSize: 14, lineHeight: 1.8, margin: 0 }}>{result.jobFit.negotiationTips}</p>
+                  </div>
+                )}
               </Section>
             )}
 
