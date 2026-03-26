@@ -596,7 +596,7 @@ function PhaseMock({ session, update, onNext }) {
     const researchHints = session.research?.summary?.questions?.length
       ? "\n网上面经中常见考察点（参考这些出题，不要照抄）：\n" + session.research.summary.questions.slice(0,5).map((q,i) => `${i+1}. ${q}`).join("\n")
       : "";
-    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${resumeText}${researchHints}\n\n请生成7道有针对性的面试题，覆盖不同考察维度。${langRule}\n\nreference字段要求（重要）：\n- 写一段完整的示范回答，300-400字，用第一人称，像真人在面试中说话\n- 行为题必须用STAR结构：情境（我当时在XX公司负责XX）→任务（面临的挑战是）→行动（我具体做了1.2.3）→结果（最终数据/量化成果）\n- 必须包含至少一个具体数字或案例，不能泛泛而谈，例如"提升了转化率"要改成"次月转化率从3.2%提升到5.1%"\n- 技术/情景题：先给出明确观点，再用具体例子或数据支撑，最后总结为什么这样做\n- 语气自然流畅，不要用"首先其次最后"这种格式化表达，要像真实对话\n\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"完整示范回答150-250字","tips":"一句话回答思路"}]}\n共7题，严格按照面试重点控制难度，覆盖不同题型，不要重复同一类型超过2题。`;
+    const prompt = `你是一位专业面试官，请为以下候选人生成${round || ""}面试题。\n\n面试重点：${roundGuide}\n岗位：${session.company} | ${session.role}\nJD摘要：${jdText}\n简历摘要：${resumeText}${researchHints}\n\n请生成7道有针对性的面试题，覆盖不同考察维度。${langRule}\n\nreference字段要求（重要）：\n- 写一段完整的示范回答，300-400字，用第一人称，像真人在面试中说话\n- 行为题必须用STAR结构：情境（我当时在XX公司负责XX）→任务（面临的挑战是）→行动（我具体做了1.2.3）→结果（最终数据/量化成果）\n- 必须包含至少一个具体数字或案例，不能泛泛而谈，例如"提升了转化率"要改成"次月转化率从3.2%提升到5.1%"\n- 技术/情景题：先给出明确观点，再用具体例子或数据支撑，最后总结为什么这样做\n- 语气自然流畅，不要用"首先其次最后"这种格式化表达，要像真实对话\n\n返回JSON：\n{"questions":[{"id":"q1","type":"行为/技术/情景/动机/综合","question":"具体问题","reference":"完整示范回答150-250字","tips":"一句话回答思路"}]}\n共7题，严格按照面试重点控制难度，覆盖不同题型，不要重复同一类型超过2题。第7题必须是反问题（type设为"反问"），question字段写"你有什么想问我的吗？"，reference字段写3-5个候选人可以问面试官的高质量问题，每个问题单独一行，格式：1. xxx\n2. xxx`;
 
     try {
       const system = "你是专业面试官，只输出合法JSON，不含任何markdown，不含代码块，直接输出{开头的JSON，用中文。";
@@ -730,8 +730,18 @@ function PhaseMock({ session, update, onNext }) {
             <div style={{ borderLeft: "2px solid " + T.accent + "55", paddingLeft: 16, marginBottom: 20 }}>
               {q.tips && <p style={{ color: T.muted, fontSize: 14, lineHeight: 1.75, marginBottom: 12 }}>{q.tips}</p>}
               <p style={{ color: T.subtle, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>参考答案</p>
-              <p style={{ color: T.text, fontSize: 15, lineHeight: 1.8, marginBottom: 12 }}>{q.reference}</p>
-              <button onClick={() => setShowRef(r => ({...r, [activeQ+"_tips"]: false}))} style={{ background: "none", border: "none", color: T.subtle, fontSize: 12, cursor: "pointer", fontFamily: T.body }}>收起</button>
+              <p style={{ color: T.text, fontSize: 15, lineHeight: 1.8, marginBottom: 12 }}>{showRef[activeQ+"_en"] ? (showRef[activeQ+"_en_text"] || "翻译中...") : q.reference}</p>
+              <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                <button onClick={() => setShowRef(r => ({...r, [activeQ+"_tips"]: false}))} style={{ background: "none", border: "none", color: T.subtle, fontSize: 12, cursor: "pointer", fontFamily: T.body }}>收起</button>
+                <button onClick={async () => {
+                  if (showRef[activeQ+"_en"]) { setShowRef(r => ({...r, [activeQ+"_en"]: false})); return; }
+                  setShowRef(r => ({...r, [activeQ+"_en"]: true, [activeQ+"_en_text"]: ""}));
+                  const translated = await callClaude("Translate the following Chinese interview answer to natural English, keeping the same structure and tone. Output only the translated text, no explanation:\n\n" + q.reference, 800);
+                  setShowRef(r => ({...r, [activeQ+"_en_text"]: translated}));
+                }} style={{ background: "none", border: "none", color: T.accent, fontSize: 12, cursor: "pointer", fontFamily: T.body }}>
+                  {showRef[activeQ+"_en"] ? "查看中文" : "英文版"}
+                </button>
+              </div>
             </div>
           ) : (
             <button onClick={() => setShowRef(r => ({...r, [activeQ+"_tips"]: true}))}
@@ -739,41 +749,49 @@ function PhaseMock({ session, update, onNext }) {
               查看参考答案
             </button>
           )}
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <Label>你的回答</Label>
-              <button
-                onClick={voiceListening ? stopListening : startVoice}
-                style={{ display: "flex", alignItems: "center", gap: 6, background: voiceListening ? T.red+"11" : "none", border: "1px solid " + (voiceListening ? T.red : T.border), borderRadius: 20, padding: "5px 14px", color: voiceListening ? T.red : T.muted, fontSize: 12, cursor: "pointer", fontFamily: T.body, transition: "all .2s", boxShadow: voiceListening ? "0 0 0 3px " + T.red + "18" : "none" }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: voiceListening ? T.red : T.subtle, display: "inline-block", flexShrink: 0, animation: voiceListening ? "pulse 1s infinite" : "none" }}/>
-                {voiceListening ? "录音中" : "语音输入"}
-              </button>
+          {q.type === "反问" ? (
+            <div style={{ padding: "20px", background: T.accentDim, borderRadius: 10, border: "1px solid " + T.accent + "33", marginBottom: 16 }}>
+              <p style={{ color: T.accent, fontSize: 12, fontWeight: 500, letterSpacing: "0.06em", marginBottom: 14 }}>💬 建议你问面试官的问题</p>
+              {(q.reference||"").split("\n").filter(l => l.trim()).map((line, i) => (
+                <p key={i} style={{ color: T.text, fontSize: 14, lineHeight: 1.8, margin: "0 0 10px 0" }}>{line}</p>
+              ))}
             </div>
-            {/* Inline interim preview — shows above textarea while speaking */}
-            {voiceListening && (
-              <div style={{ marginBottom: 8, padding: "10px 14px", borderRadius: 8, background: T.red+"08", border: "1px solid " + T.red+"33", minHeight: 36 }}>
-                <p style={{ color: T.red, fontSize: 13, lineHeight: 1.6, margin: 0, fontStyle: voiceInterim ? "normal" : "italic" }}>
-                  {voiceInterim || "请说话..."}
-                </p>
+          ) : (
+            <div>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <Label>你的回答</Label>
+                  <button
+                    onClick={voiceListening ? stopListening : startVoice}
+                    style={{ display: "flex", alignItems: "center", gap: 6, background: voiceListening ? T.red+"11" : "none", border: "1px solid " + (voiceListening ? T.red : T.border), borderRadius: 20, padding: "5px 14px", color: voiceListening ? T.red : T.muted, fontSize: 12, cursor: "pointer", fontFamily: T.body, transition: "all .2s", boxShadow: voiceListening ? "0 0 0 3px " + T.red + "18" : "none" }}>
+                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: voiceListening ? T.red : T.subtle, display: "inline-block", flexShrink: 0, animation: voiceListening ? "pulse 1s infinite" : "none" }}/>
+                    {voiceListening ? "录音中" : "语音输入"}
+                  </button>
+                </div>
+                {voiceListening && (
+                  <div style={{ marginBottom: 8, padding: "10px 14px", borderRadius: 8, background: T.red+"08", border: "1px solid " + T.red+"33", minHeight: 36 }}>
+                    <p style={{ color: T.red, fontSize: 13, lineHeight: 1.6, margin: 0, fontStyle: voiceInterim ? "normal" : "italic" }}>
+                      {voiceInterim || "请说话..."}
+                    </p>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          {/* Main answer textarea — final recognized text flows directly here */}
-          <TA
-            value={answers[activeQ]}
-            onChange={v => { const a=[...answers]; a[activeQ]=v; setAnswers(a); }}
-            rows={5}
-            placeholder="在这里输入你的回答，或点击右上角语音输入..."
-          />
-
-          <div style={{ display: "flex", gap: 16, marginTop: 16, alignItems: "center" }}>
-            <Btn onClick={() => { if (!evalLoading) evalAnswer(activeQ); }} disabled={!(answers[activeQ] && answers[activeQ].trim()) || rounds[activeQ]>=3} style={{ width: 120, opacity: evalLoading ? 0.85 : 1 }}>
-              {evalLoading ? <><Spinner/> 评分中...</> : rounds[activeQ]>=3 ? "已练习 3 次" : rounds[activeQ]>0 ? "再次评分 (" + rounds[activeQ] + "/3)" : "提交回答"}
-            </Btn>
-            {activeQ < questions.length-1 && (
-              <>{activeQ > 0 && <button onClick={() => setActiveQSafe(activeQ-1)} style={{ background: "none", border: "none", color: T.muted, fontSize: 14, cursor: "pointer", fontFamily: T.body }}>{"\u2190 上一题"}</button>}<button onClick={() => setActiveQSafe(activeQ+1)} style={{ background: "none", border: "none", color: T.muted, fontSize: 14, cursor: "pointer", fontFamily: T.body }}>{"下一题 \u2192"}</button></>
-            )}
-          </div>
+              <TA
+                value={answers[activeQ]}
+                onChange={v => { const a=[...answers]; a[activeQ]=v; setAnswers(a); }}
+                rows={5}
+                placeholder="在这里输入你的回答，或点击右上角语音输入..."
+              />
+              <div style={{ display: "flex", gap: 16, marginTop: 16, alignItems: "center" }}>
+                <Btn onClick={() => { if (!evalLoading) evalAnswer(activeQ); }} disabled={!(answers[activeQ] && answers[activeQ].trim()) || rounds[activeQ]>=3} style={{ width: 120, opacity: evalLoading ? 0.85 : 1 }}>
+                  {evalLoading ? <><Spinner/> 评分中...</> : rounds[activeQ]>=3 ? "已练习 3 次" : rounds[activeQ]>0 ? "再次评分 (" + rounds[activeQ] + "/3)" : "提交回答"}
+                </Btn>
+                {activeQ < questions.length-1 && (
+                  <>{activeQ > 0 && <button onClick={() => setActiveQSafe(activeQ-1)} style={{ background: "none", border: "none", color: T.muted, fontSize: 14, cursor: "pointer", fontFamily: T.body }}>{"\u2190 上一题"}</button>}<button onClick={() => setActiveQSafe(activeQ+1)} style={{ background: "none", border: "none", color: T.muted, fontSize: 14, cursor: "pointer", fontFamily: T.body }}>{"下一题 \u2192"}</button></>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
       {fb && (
@@ -1594,7 +1612,7 @@ function AppToolkit({ app, baseResume, resumes = [] }) {
   }, [jdSaved]);
 
   useEffect(() => {
-    if (jdSaved && !greetings.length && !greetLoading) generateGreetings();
+    // Auto-generate disabled — user triggers manually
   }, [jdSaved]);
 
   const saveJd = async () => {
@@ -1873,13 +1891,19 @@ ${changeList}
             {[{ id: "greet", label: "招呼语" }, { id: "resume", label: "简历优化" }].map(t => (
               <button key={t.id} onClick={() => {
                 setTab(t.id);
-                if (t.id === "greet" && !greetings.length && !greetLoading) generateGreetings();
+                // manual only
                 if (t.id === "resume" && !suggestions.length && !resumeLoading) analyzeResume();
               }} style={{ background: "none", border: "none", borderBottom: tab === t.id ? "1.5px solid " + T.text : "1.5px solid transparent", marginBottom: -1, color: tab === t.id ? T.text : T.subtle, fontSize: 14, fontWeight: tab === t.id ? 500 : 400, cursor: "pointer", fontFamily: T.body, paddingBottom: 10 }}>{t.label}</button>
             ))}
           </div>
           {tab === "greet" && (
             <div style={{ paddingBottom: 20 }}>
+              {!greetings.length && !greetLoading && (
+                <div style={{ textAlign: "center", padding: "32px 0" }}>
+                  <p style={{ color: T.subtle, fontSize: 14, marginBottom: 16 }}>点击生成招呼语</p>
+                  <Btn onClick={generateGreetings}>生成招呼语</Btn>
+                </div>
+              )}
               {greetLoading && (
                 <div style={{ paddingBottom: 20 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
@@ -2071,7 +2095,7 @@ async function loadBaseResume() {
 }
 
 function newApp(prefill = {}) {
-  return { id: "a_" + Date.now(), company: "", role: "", platform: "BOSS", appliedAt: new Date().toISOString().slice(0, 10), status: "", note: "", sessionId: null, ...prefill };
+  return { id: "a_" + Date.now(), company: "", role: "", platform: "BOSS", appliedAt: new Date().toISOString().slice(0, 10), status: "", note: "", jobUrl: "", sessionId: null, ...prefill };
 }
 
 // Background generation — runs after addApp, writes results into localStorage
@@ -2387,6 +2411,7 @@ function AppTracker({ sessions, onStartPrep }) {
               </div>
               <div><Label>投递日期</Label><Inp value={draft.appliedAt} onChange={v => setDraft(p => ({ ...p, appliedAt: v }))} placeholder="2025-03-01"/></div>
             </div>
+            <div><Label>投递链接（可选）</Label><Inp value={draft.jobUrl||""} onChange={v => setDraft(p => ({ ...p, jobUrl: v }))} placeholder="粘贴岗位链接..."/></div>
             <div><Label>备注</Label><Inp value={draft.note} onChange={v => setDraft(p => ({ ...p, note: v }))} placeholder="渠道/备注"/></div>
             <div>
               <Label>职位描述 (JD)</Label>
