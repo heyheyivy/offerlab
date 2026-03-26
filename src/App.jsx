@@ -730,17 +730,24 @@ function PhaseMock({ session, update, onNext }) {
             <div style={{ borderLeft: "2px solid " + T.accent + "55", paddingLeft: 16, marginBottom: 20 }}>
               {q.tips && <p style={{ color: T.muted, fontSize: 14, lineHeight: 1.75, marginBottom: 12 }}>{q.tips}</p>}
               <p style={{ color: T.subtle, fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>参考答案</p>
-              <p style={{ color: T.text, fontSize: 15, lineHeight: 1.8, marginBottom: 12 }}>{showRef[activeQ+"_en"] ? (showRef[activeQ+"_en_text"] || "翻译中...") : q.reference}</p>
+              <p style={{ color: T.text, fontSize: 15, lineHeight: 1.8, marginBottom: 12 }}>{q.reference}</p>
+              {showRef[activeQ+"_en_text"] && (
+                <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px dashed " + T.border }}>
+                  <p style={{ color: T.subtle, fontSize: 11, letterSpacing: "0.06em", marginBottom: 8 }}>ENGLISH VERSION</p>
+                  <p style={{ color: T.muted, fontSize: 15, lineHeight: 1.8, marginBottom: 12 }}>{showRef[activeQ+"_en_text"]}</p>
+                </div>
+              )}
               <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
                 <button onClick={() => setShowRef(r => ({...r, [activeQ+"_tips"]: false}))} style={{ background: "none", border: "none", color: T.subtle, fontSize: 12, cursor: "pointer", fontFamily: T.body }}>收起</button>
-                <button onClick={async () => {
-                  if (showRef[activeQ+"_en"]) { setShowRef(r => ({...r, [activeQ+"_en"]: false})); return; }
-                  setShowRef(r => ({...r, [activeQ+"_en"]: true, [activeQ+"_en_text"]: ""}));
-                  const translated = await callClaude("Translate the following Chinese interview answer to natural English, keeping the same structure and tone. Output only the translated text, no explanation:\n\n" + q.reference, 800);
-                  setShowRef(r => ({...r, [activeQ+"_en_text"]: translated}));
-                }} style={{ background: "none", border: "none", color: T.accent, fontSize: 12, cursor: "pointer", fontFamily: T.body }}>
-                  {showRef[activeQ+"_en"] ? "查看中文" : "英文版"}
-                </button>
+                {!showRef[activeQ+"_en_text"] && (
+                  <button onClick={async () => {
+                    setShowRef(r => ({...r, [activeQ+"_en_text"]: "翻译中..."}));
+                    const translated = await callClaude("Translate the following Chinese interview answer to natural English, keeping the same structure and tone. Output only the translated text, no explanation:\n\n" + q.reference, 800);
+                    setShowRef(r => ({...r, [activeQ+"_en_text"]: translated}));
+                  }} style={{ background: "none", border: "none", color: T.accent, fontSize: 12, cursor: "pointer", fontFamily: T.body }}>
+                    英文版
+                  </button>
+                )}
               </div>
             </div>
           ) : (
